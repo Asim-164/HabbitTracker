@@ -170,9 +170,107 @@ async function deleteHabit(req, res) {
     }
 }
 
+async function getHabitStreak(req, res) {
+    try {
+        const pool = await connectDatabase();
+
+        const habitId = req.params.id;
+        const userId = req.user.userId;
+
+        const ownership = await pool.request()
+            .input("HabitID", habitId)
+            .input("UserID", userId)
+            .query(`
+                SELECT HabitID
+                FROM Habits
+                WHERE HabitID = @HabitID AND UserID = @UserID
+            `);
+
+        if (ownership.recordset.length === 0) {
+            return res.status(403).json({
+                message: "You do not have access to this habit"
+            });
+        }
+
+        const asOf = req.query.asOf || new Date().toISOString().slice(0, 10);
+
+        const logs = await pool.request()
+            .input("HabitID", habitId)
+            .input("AsOf", asOf)
+            .query(`
+                SELECT Date, Status
+                FROM HabitLogs
+                WHERE HabitID = @HabitID AND Date <= @AsOf
+                ORDER BY Date ASC
+            `);
+
+        const rows = logs.recordset;
+
+        let currentStreak = 0;
+        let longestStreak = 0;
+        let runningStreak = 0;
+        let lastLoggedDate = null;
+        let totalCompletedDays = 0;
+        let previousDate = null;
+
+        for (const row of rows) {
+            const isMissed = row.Status === "Missed";
+
+            if (row.Status === "Completed") {
+                totalCompletedDays += 1;
+            }
+
+            if (!isMissed) {
+                lastLoggedDate = row.Date;
+
+                if (previousDate !== null && isConsecutiveDay(previousDate, row.Date)) {
+                    runningStreak += 1;
+                } else {
+                    runningStreak = 1;
+                }
+            } else {
+                runningStreak = 0;
+            }
+
+            if (runningStreak > longestStreak) {
+                longestStreak = runningStreak;
+            }
+
+            previousDate = row.Date;
+        }
+
+        currentStreak = runningStreak;
+
+        res.json({
+            habitId: Number(habitId),
+            asOf,
+            currentStreak,
+            longestStreak,
+            lastLoggedDate,
+            totalCompletedDays
+        });
+
+    } catch (error) {
+        console.log("Error getting habit streak:", error);
+
+        res.status(500).json({
+            message: "Failed to get habit streak"
+        });
+    }
+}
+
+function isConsecutiveDay(previousDate, currentDate) {
+    const prev = new Date(previousDate);
+    const curr = new Date(currentDate);
+
+    const oneDay = 24 * 60 * 60 * 1000;
+    return (curr - prev) === oneDay;
+}
+
 module.exports = {
     createHabit,
     getHabits,
     updateHabit,
-    deleteHabit
+    deleteHabit,
+    getHabitStreak
 };

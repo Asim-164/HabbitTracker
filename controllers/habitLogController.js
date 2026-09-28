@@ -1,5 +1,24 @@
 const connectDatabase = require("../database/db");
 
+function deriveStatus (targetValue, actualValue, clientStatus) {
+    if (targetValue === null || targetValue === undefined || Number(targetValue) === 0) {
+        return clientStatus;
+    }
+
+    const actual = Number(actualValue ?? 0);
+    const target = Number(targetValue);
+
+    if(actual <= 0) {
+        return "Missed"
+    }
+
+    if (actual >= target) {
+        return "Completed"
+    }
+
+    return "Partial";
+}
+
 async function createHabitLog(req, res) {
     try {
         const pool = await connectDatabase();
@@ -18,7 +37,7 @@ async function createHabitLog(req, res) {
             .input("HabitID", habitId)
             .input("UserID", userId)
             .query(`
-                SELECT HabitID
+                SELECT HabitID, TargetValue
                 FROM Habits
                 WHERE HabitID = @HabitID AND UserID = @UserID
             `);
@@ -29,10 +48,13 @@ async function createHabitLog(req, res) {
             });
         }
 
+        const targetValue = ownership.recordset[0].TargetValue;
+        const finalStatus = deriveStatus(targetValue, actualValue, status)
+
         await pool.request()
             .input("HabitID", habitId)
             .input("Date", date)
-            .input("Status", status)
+            .input("Status", finalStatus)
             .input("ActualValue", actualValue)
             .input("Notes", notes)
             .query(`
@@ -60,6 +82,26 @@ async function createHabitLog(req, res) {
 
     } catch (error) {
         console.log("Error creating habit log:", error);
+
+        if (error.number === 2627) {
+            const { habitId, date } = req.body;
+
+            const existing = await connectDatabase()
+                .then((pool) => pool.request()
+                    .input("HabitID", habitId)
+                    .input("Date", date)
+                    .query(`
+                        SELECT LogID
+                        FROM HabitLogs
+                        WHERE HabitID = @HabitID AND Date = @Date
+                    `)
+                );
+
+            return res.status(409).json({
+                message: "This habit already has a log for that date",
+                existingLogId: existing.recordset[0]?.LogID ?? null
+            });
+        }
 
         res.status(500).json({
             message: "Failed to create habit log"
@@ -127,7 +169,7 @@ async function updateHabitLog(req, res) {
             .input("LogID", logId)
             .input("UserID", userId)
             .query(`
-                SELECT hl.LogID
+                SELECT hl.LogID, h.TargetValue
                 FROM HabitLogs hl
                 JOIN Habits h ON h.HabitID = hl.HabitID
                 WHERE hl.LogID = @LogID AND h.UserID = @UserID
@@ -139,10 +181,14 @@ async function updateHabitLog(req, res) {
             });
         }
 
+        const targetValue = ownership.recordset[0].TargetValue;
+        const finalStatus = deriveStatus(targetValue, actualValue, status)
+
+
         await pool.request()
             .input("LogID", logId)
             .input("Date", date)
-            .input("Status", status)
+            .input("Status", finalStatus)
             .input("ActualValue", actualValue)
             .input("Notes", notes)
             .query(`
