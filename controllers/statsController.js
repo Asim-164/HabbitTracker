@@ -152,6 +152,113 @@ async function getSummary(req, res) {
     }
 }
 
+async function getCalendar(req, res) {
+    try {
+        const habitId = req.query.habitId;
+
+        if (!habitId) {
+            return res.status(400).json({
+                message: "habitId is required"
+            });
+        }
+
+        const month = req.query.month || toDateString(new Date()).slice(0, 7);
+
+        if (!/^\d{4}-\d{2}$/.test(month)) {
+            return res.status(400).json({
+                message: "month must be in YYYY-MM format"
+            });
+        }
+
+               const [yearStr, monthStr] = month.split("-");
+        const year = Number(yearStr);
+        const monthIndex = Number(monthStr) - 1;
+
+        const firstDay = new Date(Date.UTC(year, monthIndex, 1));
+        const lastDay = new Date(Date.UTC(year, monthIndex + 1, 0));
+
+        const from = toDateString(firstDay);
+        const to = toDateString(lastDay);
+
+        const pool = await connectDatabase();
+        const userId = req.user.userId;
+
+        const habitResult = await pool.request()
+            .input("HabitID", habitId)
+            .input("UserID", userId)
+            .query(`
+                SELECT HabitID, Name, Unit, TargetValue
+                FROM Habits
+                WHERE HabitID = @HabitID AND UserID = @UserID
+            `);
+
+        if (habitResult.recordset.length === 0) {
+            return res.status(403).json({
+                message: "You do not have access to this habit"
+            });
+        }
+
+        const habit = habitResult.recordset[0];
+
+        const logsResult = await pool.request()
+            .input("HabitID", habitId)
+            .input("From", from)
+            .input("To", to)
+            .query(`
+                SELECT Date, Status, ActualValue
+                FROM HabitLogs
+                WHERE HabitID = @HabitID
+                    AND Date >= @From
+                    AND Date <= @To
+            `);
+
+        const logsByDate = new Map();
+        for (const log of logsResult.recordset) {
+            logsByDate.set(toDateString(log.Date), log);
+        }
+
+        const days = [];
+        const daysInMonth = lastDay.getUTCDate();
+
+        for (let day = 1; day <= daysInMonth; day += 1) {
+            const dateObj = new Date(Date.UTC(year, monthIndex, day));
+            const dateStr = toDateString(dateObj);
+            const log = logsByDate.get(dateStr);
+
+            if (log) {
+                days.push({
+                    date: dateStr,
+                    status: log.Status,
+                    actualValue: Number(log.ActualValue ?? 0)
+                });
+            } else {
+                days.push({
+                    date: dateStr,
+                    status: null,
+                    actualValue: null
+                });
+            }
+        }
+
+        res.json({
+            month,
+            habitId: habit.HabitID,
+            habitName: habit.Name,
+            unit: habit.Unit,
+            targetValue: habit.TargetValue === null ? null : Number(habit.TargetValue),
+            days
+        });
+
+    } catch (error) {
+        console.log("Error getting stats calendar:", error);
+
+        res.status(500).json({
+            message: "Failed to get stats calendar"
+        });
+    }
+}
+
 module.exports = {
-    getSummary
+    getSummary,
+    getCalendar
 };

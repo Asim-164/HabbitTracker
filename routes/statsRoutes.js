@@ -4,8 +4,9 @@ const router = express.Router();
 
 const authenticateToken = require("../middleware/authMiddleware");
 
-const { getSummary } = require("../controllers/statsController");
+const { getSummary, getCalendar } = require("../controllers/statsController");
 
 router.get("/summary", authenticateToken, getSummary);
+router.get("/calendar", authenticateToken, getCalendar);
 
 module.exports = router;
