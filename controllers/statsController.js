@@ -1,31 +1,17 @@
 const connectDatabase = require("../database/db");
-
-function toDateString(date) {
-    return date.toISOString().slice(0, 10);
-}
-
-function daysBetweenInclusive(fromStr, toStr) {
-    const from = new Date(fromStr);
-    const to = new Date(toStr);
-    const oneDay = 24 * 60 * 60 * 1000;
-
-    return Math.round((to - from) / oneDay) + 1;
-}
+const { toDateString, daysBetweenInclusive, isConsecutiveDay, parseRange } = require("../utils/dateHelpers");
 
 async function getSummary(req, res) {
     try {
-        const today = toDateString(new Date());
+        const range = parseRange(req.query);
 
-        const to = req.query.to || today;
-        const from = req.query.from || toDateString(
-            new Date(new Date(to).getTime() - 6 * 24 * 60 * 60 * 1000)
-        );
-
-        if (from > to) {
+        if (range.error) {
             return res.status(400).json({
-                message: "from must be <= to"
+                message: range.error
             });
         }
+
+        const { from, to, daysInRange } = range;
 
         const pool = await connectDatabase();
         const userId = req.user.userId;
@@ -52,8 +38,6 @@ async function getSummary(req, res) {
                     AND hl.Date <= @To
                 ORDER BY hl.HabitID ASC, hl.Date ASC
             `);
-
-        const daysInRange = daysBetweenInclusive(from, to);
 
         const logsByHabit = new Map();
         for (const log of logsResult.recordset) {
@@ -258,7 +242,156 @@ async function getCalendar(req, res) {
     }
 }
 
+async function getHabitStats(req, res) {
+    try {
+        const habitId = req.params.id;
+
+        const range = parseRange(req.query);
+
+        if (range.error) {
+            return res.status(400).json({
+                message: range.error
+            });
+        }
+
+        const { from, to, daysInRange } = range;
+
+        const asOf = req.query.asOf || toDateString(new Date());
+
+        const pool = await connectDatabase();
+        const userId = req.user.userId;
+
+        const habitResult = await pool.request()
+            .input("HabitID", habitId)
+            .input("UserID", userId)
+            .query(`
+                SELECT HabitID, Name, Unit, TargetValue, Frequency, Status
+                FROM Habits
+                WHERE HabitID = @HabitID AND UserID = @UserID
+            `);
+
+        if (habitResult.recordset.length === 0) {
+            return res.status(403).json({
+                message: "You do not have access to this habit"
+            });
+        }
+
+        const habit = habitResult.recordset[0];
+
+        const rangeLogs = await pool.request()
+            .input("HabitID", habitId)
+            .input("From", from)
+            .input("To", to)
+            .query(`
+                SELECT Status, ActualValue
+                FROM HabitLogs
+                WHERE HabitID = @HabitID
+                    AND Date >= @From
+                    AND Date <= @To
+            `);
+
+        let completedCount = 0;
+        let partialCount = 0;
+        let missedCount = 0;
+        let totalActual = 0;
+
+        for (const log of rangeLogs.recordset) {
+            if (log.Status === "Completed") completedCount += 1;
+            else if (log.Status === "Partial") partialCount += 1;
+            else if (log.Status === "Missed") missedCount += 1;
+
+            totalActual += Number(log.ActualValue ?? 0);
+        }
+
+        const logsInRange = rangeLogs.recordset.length;
+        const totalTarget = habit.TargetValue === null
+            ? null
+            : Number(habit.TargetValue) * daysInRange;
+
+        const completionRate = logsInRange === 0
+            ? null
+            : completedCount / logsInRange;
+
+        const consistencyRate = daysInRange === 0
+            ? null
+            : logsInRange / daysInRange;
+
+        const streakLogs = await pool.request()
+            .input("HabitID", habitId)
+            .input("AsOf", asOf)
+            .query(`
+                SELECT Date, Status
+                FROM HabitLogs
+                WHERE HabitID = @HabitID AND Date <= @AsOf
+                ORDER BY Date ASC
+            `);
+
+        let runningStreak = 0;
+        let longestStreak = 0;
+        let lastLoggedDate = null;
+        let previousDate = null;
+
+        for (const row of streakLogs.recordset) {
+            const isMissed = row.Status === "Missed";
+
+            if (!isMissed) {
+                lastLoggedDate = row.Date;
+
+                if (previousDate !== null && isConsecutiveDay(previousDate, row.Date)) {
+                    runningStreak += 1;
+                } else {
+                    runningStreak = 1;
+                }
+            } else {
+                runningStreak = 0;
+            }
+
+            if (runningStreak > longestStreak) {
+                longestStreak = runningStreak;
+            }
+
+            previousDate = row.Date;
+        }
+
+        res.json({
+            habitId: habit.HabitID,
+            name: habit.Name,
+            unit: habit.Unit,
+            targetValue: habit.TargetValue === null ? null : Number(habit.TargetValue),
+            frequency: habit.Frequency,
+            status: habit.Status,
+            range: {
+                from,
+                to,
+                daysInRange,
+                logsInRange,
+                completedCount,
+                partialCount,
+                missedCount,
+                totalActual,
+                totalTarget,
+                completionRate,
+                consistencyRate
+            },
+            streak: {
+                asOf,
+                currentStreak: runningStreak,
+                longestStreak,
+                lastLoggedDate
+            }
+        });
+
+    } catch (error) {
+        console.log("Error getting habit stats:", error);
+
+        res.status(500).json({
+            message: "Failed to get habit stats"
+        });
+    }
+}
+
 module.exports = {
     getSummary,
-    getCalendar
+    getCalendar,
+    getHabitStats
 };

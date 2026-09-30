@@ -1,4 +1,5 @@
 const connectDatabase = require("../database/db");
+const { isConsecutiveDay } = require("../utils/dateHelpers");
 
 async function createHabit(req, res) {
     try {
@@ -257,14 +258,6 @@ async function getHabitStreak(req, res) {
             message: "Failed to get habit streak"
         });
     }
-}
-
-function isConsecutiveDay(previousDate, currentDate) {
-    const prev = new Date(previousDate);
-    const curr = new Date(currentDate);
-
-    const oneDay = 24 * 60 * 60 * 1000;
-    return (curr - prev) === oneDay;
 }
 
 module.exports = {
