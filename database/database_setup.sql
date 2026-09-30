@@ -46,7 +46,9 @@ CREATE TABLE HabitLogs
     Notes NVARCHAR(500),
     CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
 
-    FOREIGN KEY (HabitID) REFERENCES Habits(HabitID)
+    FOREIGN KEY (HabitID) REFERENCES Habits(HabitID),
+
+    CONSTRAINT UQ_HabitLogs_HabitID_Date UNIQUE (HabitID, Date)
 );
 
 CREATE TABLE Reflections
@@ -60,57 +62,3 @@ CREATE TABLE Reflections
 
     FOREIGN KEY (UserID) REFERENCES Users(UserID)
 );
-
-SELECT * FROM Users;
-
-SELECT UserID, Name, Email, PasswordHash, CreatedAt
-FROM Users;
-
-SELECT * FROM Habits;
-
-SELECT *
-FROM Habits
-WHERE HabitID = 2;
-
-SELECT *
-FROM Habits;
-
-SELECT HabitID, UserID, Name, TargetValue, Unit
-FROM Habits;
-
-SELECT *
-FROM HabitLogs;
-
-SELECT HabitID, UserID, Name, Description
-FROM Habits
-WHERE Name = 'Ownership Check';
-
-SELECT HabitID, UserID, Name, TargetValue
-FROM Habits
-WHERE HabitID = 3;
-
-SELECT HabitID, UserID, Name
-FROM Habits
-WHERE HabitID = 5;
-
-SELECT HabitID, UserID, Name, TargetValue
-FROM Habits
-WHERE HabitID = 3;
-
-SELECT LogID, HabitID, Date, Status, ActualValue, Notes
-FROM HabitLogs
-WHERE LogID = 3;
-
-SELECT ReflectionID, UserID, Date, Mood, Notes
-FROM Reflections
-WHERE Notes = 'ownership test - reflections';
-
-SELECT ReflectionID, UserID, Date, Mood, Notes
-FROM Reflections;
-
-SELECT ReflectionID, UserID, Date, Mood, Notes
-FROM Reflections
-WHERE ReflectionID = 2;
-
-SELECT ReflectionID, UserID, Date, Mood, Notes
-FROM Reflections;
