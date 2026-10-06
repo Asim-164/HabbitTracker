@@ -747,3 +747,115 @@ input, textarea, select {
     border-color: var(--sage-400);
     background: #fff;
 }
+
+/* ---------- Buttons ---------- */
+.btn-primary {
+    padding: 10px 20px;
+    background: var(--sage-500);
+    color: #fff;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.15s ease;
+}
+
+.btn-primary:hover {
+    background: var(--sage-600);
+}
+
+.btn-secondary {
+    padding: 10px 20px;
+    background: var(--surface);
+    color: var(--ink-700);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-secondary:hover {
+    background: var(--sage-50);
+    border-color: var(--sage-300);
+}
+
+/* ---------- Habit form ---------- */
+.habit-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+}
+
+.habit-form__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4);
+}
+
+.habit-form__field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--ink-700);
+}
+
+.habit-form__field input,
+.habit-form__field select,
+.habit-form__field textarea {
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--sage-50);
+    color: var(--ink-900);
+    font-family: inherit;
+    font-size: 14px;
+    width: 100%;
+    resize: vertical;
+}
+
+.habit-form__field input:focus,
+.habit-form__field select:focus,
+.habit-form__field textarea:focus {
+    outline: none;
+    border-color: var(--sage-400);
+    background: #fff;
+}
+
+.habit-form__check {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--ink-700);
+    cursor: pointer;
+}
+
+.habit-form__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--line);
+}
+
+.habit-form__msg {
+    font-size: 13px;
+    color: var(--red);
+    min-height: 18px;
+    margin: 0;
+}
+
+.habit-form__msg.success {
+    color: var(--sage-600);
+}
+
+@media (max-width: 640px) {
+    .habit-form__row {
+        grid-template-columns: 1fr;
+    }
+}
+
+[hidden] {
+    display: none !important;
+}

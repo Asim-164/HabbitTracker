@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Habit — HabbitTracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="app">
+
+    <aside class="app__sidebar">
+        <div class="app__brand">HabbitTracker</div>
+
+        <nav class="app__nav">
+            <a href="/pages/dashboard.html" class="app__nav-item">Dashboard</a>
+            <a href="/pages/habits.html" class="app__nav-item is-active">My Habits</a>
+            <a href="/pages/tracking.html" class="app__nav-item">Daily Tracking</a>
+            <a href="/pages/calendar.html" class="app__nav-item">Calendar</a>
+            <a href="/pages/statistics.html" class="app__nav-item">Statistics</a>
+            <a href="/pages/reflections.html" class="app__nav-item">Reflections</a>
+            <a href="/pages/settings.html" class="app__nav-item">Settings</a>
+        </nav>
+
+        <button type="button" class="app__logout" id="logout-btn">Logout</button>
+    </aside>
+
+    <main class="app__main">
+        <header class="app__header">
+            <h1 class="app__page-title" id="form-title">New Habit</h1>
+            <div class="app__user" id="user-name">—</div>
+        </header>
+
+        <div class="app__content">
+            <section class="panel">
+                <form id="habit-form" class="habit-form">
+
+                    <div class="habit-form__row">
+                        <label class="habit-form__field">
+                            <span>Name</span>
+                            <input type="text" name="name" required maxlength="100">
+                        </label>
+
+                        <label class="habit-form__field">
+                            <span>Frequency</span>
+                            <select name="frequency">
+                                <option value="Daily">Daily</option>
+                                <option value="Weekly">Weekly</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <label class="habit-form__field">
+                        <span>Description (optional)</span>
+                        <textarea name="description" rows="2" maxlength="500"></textarea>
+                    </label>
+
+                    <label class="habit-form__check">
+                        <input type="checkbox" id="measurable" name="measurable">
+                        <span>Measure this habit with a numeric target</span>
+                    </label>
+
+                    <div class="habit-form__row" id="target-row" hidden>
+                        <label class="habit-form__field">
+                            <span>Target value</span>
+                            <input type="number" name="targetValue" min="0" step="1" placeholder="60">
+                        </label>
+
+                        <label class="habit-form__field">
+                            <span>Unit</span>
+                            <input type="text" name="unit" maxlength="30" placeholder="minutes">
+                        </label>
+                    </div>
+
+                    <div class="habit-form__row">
+                        <label class="habit-form__field">
+                            <span>Difficulty</span>
+                            <select name="difficulty">
+                                <option value="Easy">Easy</option>
+                                <option value="Medium" selected>Medium</option>
+                                <option value="Hard">Hard</option>
+                            </select>
+                        </label>
+
+                        <label class="habit-form__field">
+                            <span>Start date</span>
+                            <input type="date" name="startDate" required>
+                        </label>
+                    </div>
+
+                    <div class="habit-form__actions">
+                        <button type="button" class="btn-secondary" id="cancel-btn">Cancel</button>
+                        <button type="submit" class="btn-primary">Save</button>
+                    </div>
+
+                    <p class="habit-form__msg" id="form-msg"></p>
+                </form>
+            </section>
+        </div>
+    </main>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/habits.js"></script>
+</body>
+</html>
