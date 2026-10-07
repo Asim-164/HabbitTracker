@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistics — HabbitTracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="app">
+
+    <aside class="app__sidebar">
+        <div class="app__brand">HabbitTracker</div>
+
+        <nav class="app__nav">
+            <a href="/pages/dashboard.html" class="app__nav-item">Dashboard</a>
+            <a href="/pages/habits.html" class="app__nav-item">My Habits</a>
+            <a href="/pages/tracking.html" class="app__nav-item">Daily Tracking</a>
+            <a href="/pages/calendar.html" class="app__nav-item">Calendar</a>
+            <a href="/pages/statistics.html" class="app__nav-item is-active">Statistics</a>
+            <a href="/pages/reflections.html" class="app__nav-item">Reflections</a>
+            <a href="/pages/settings.html" class="app__nav-item">Settings</a>
+        </nav>
+
+        <button type="button" class="app__logout" id="logout-btn">Logout</button>
+    </aside>
+
+    <main class="app__main">
+        <header class="app__header">
+            <h1 class="app__page-title">Statistics</h1>
+            <div class="app__user" id="user-name">—</div>
+        </header>
+
+        <div class="app__content">
+
+            <!-- Summary (last 7 days) -->
+            <section class="panel">
+                <h3 class="panel__title">Last 7 Days</h3>
+                <div class="stats__summary" id="summary-block">
+                    <p class="muted small">Loading…</p>
+                </div>
+            </section>
+
+            <!-- Report -->
+            <section class="panel">
+                <div class="stats__head">
+                    <h3 class="panel__title">Performance over time</h3>
+                    <div class="stats__controls">
+                        <div class="habits__tabs">
+                            <button type="button" class="tab is-active" data-group="week">Weekly</button>
+                            <button type="button" class="tab" data-group="month">Monthly</button>
+                        </div>
+                        <select id="periods-select">
+                            <option value="4">4 periods</option>
+                            <option value="8" selected>8 periods</option>
+                            <option value="12">12 periods</option>
+                            <option value="26">26 periods</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="report-block">
+                    <p class="muted small">Loading…</p>
+                </div>
+            </section>
+
+            <!-- Per-habit table -->
+            <section class="panel">
+                <h3 class="panel__title">Per-Habit Breakdown</h3>
+                <div id="table-block">
+                    <p class="muted small">Loading…</p>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/statistics.js"></script>
+</body>
+</html>

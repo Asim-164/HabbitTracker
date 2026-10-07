@@ -1089,3 +1089,121 @@ input, textarea, select {
 .cal__dot.is-partial   { background: #fbf0d9;        border-color: #ecd39b; }
 .cal__dot.is-missed    { background: #fbe3e1;        border-color: #e7b4af; }
 .cal__dot.is-empty     { background: var(--surface); }
+
+/* ---------- Statistics ---------- */
+.stats__summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
+}
+
+.stats__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-4);
+}
+
+.stats__head .panel__title {
+    margin-bottom: 0;
+}
+
+.stats__controls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.stats__controls select {
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    font-family: inherit;
+    font-size: 13px;
+}
+
+/* Report rows */
+.report {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.report__row {
+    display: grid;
+    grid-template-columns: 110px 1fr 90px;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: 13px;
+}
+
+.report__label {
+    color: var(--ink-500);
+    font-weight: 500;
+}
+
+.report__bar {
+    height: 8px;
+    background: var(--sage-100);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.report__bar-fill {
+    height: 100%;
+    background: var(--sage-500);
+    border-radius: 999px;
+}
+
+.report__value {
+    text-align: right;
+    color: var(--ink-700);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Table */
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.stats-table th {
+    text-align: left;
+    font-weight: 500;
+    color: var(--ink-500);
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+}
+
+.stats-table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink-900);
+}
+
+.stats-table tr:last-child td {
+    border-bottom: none;
+}
+
+.stats-table .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.stats-table__wrap {
+    overflow-x: auto;
+}
+
+@media (max-width: 900px) {
+    .stats__summary {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .report__row {
+        grid-template-columns: 90px 1fr 70px;
+    }
+}
