@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reflections — HabbitTracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="app">
+
+    <aside class="app__sidebar">
+        <div class="app__brand">HabbitTracker</div>
+
+        <nav class="app__nav">
+            <a href="/pages/dashboard.html" class="app__nav-item">Dashboard</a>
+            <a href="/pages/habits.html" class="app__nav-item">My Habits</a>
+            <a href="/pages/tracking.html" class="app__nav-item">Daily Tracking</a>
+            <a href="/pages/calendar.html" class="app__nav-item">Calendar</a>
+            <a href="/pages/statistics.html" class="app__nav-item">Statistics</a>
+            <a href="/pages/reflections.html" class="app__nav-item is-active">Reflections</a>
+            <a href="/pages/settings.html" class="app__nav-item">Settings</a>
+        </nav>
+
+        <button type="button" class="app__logout" id="logout-btn">Logout</button>
+    </aside>
+
+    <main class="app__main">
+        <header class="app__header">
+            <h1 class="app__page-title">Reflections</h1>
+            <div class="app__user" id="user-name">—</div>
+        </header>
+
+        <div class="app__content">
+            <div class="habits__head">
+                <p class="muted small">A short daily note about how things are going.</p>
+                <button type="button" class="btn-primary" id="new-reflection-btn">New Reflection</button>
+            </div>
+
+            <section class="panel">
+                <div id="reflections-list" class="stack"></div>
+            </section>
+        </div>
+    </main>
+
+    <!-- New Reflection modal -->
+    <div class="modal" id="reflection-modal" hidden>
+        <div class="modal__backdrop" data-close></div>
+        <div class="modal__box">
+            <h3 class="modal__title">New Reflection</h3>
+
+            <form id="reflection-form" class="habit-form">
+                <label class="habit-form__field">
+                    <span>Date</span>
+                    <input type="date" name="date" required>
+                </label>
+
+                <label class="habit-form__field">
+                    <span>Mood</span>
+                    <select name="mood" required>
+                        <option value="">Choose…</option>
+                        <option value="Bad">😞 Bad</option>
+                        <option value="Meh">😕 Meh</option>
+                        <option value="Okay">😐 Okay</option>
+                        <option value="Good">🙂 Good</option>
+                        <option value="Great">😄 Great</option>
+                    </select>
+                </label>
+
+                <label class="habit-form__field">
+                    <span>Notes</span>
+                    <textarea name="notes" rows="4" maxlength="1000" placeholder="How did today go?"></textarea>
+                </label>
+
+                <div class="habit-form__actions">
+                    <button type="button" class="btn-secondary" data-close>Cancel</button>
+                    <button type="submit" class="btn-primary">Save</button>
+                </div>
+                <p class="habit-form__msg" id="reflection-msg"></p>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/reflections.js"></script>
+</body>
+</html>
