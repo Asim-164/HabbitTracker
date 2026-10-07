@@ -859,3 +859,233 @@ input, textarea, select {
 [hidden] {
     display: none !important;
 }
+
+/* ---------- My Habits ---------- */
+.habits__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+}
+
+.habits__tabs {
+    display: inline-flex;
+    background: var(--sage-50);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 3px;
+    gap: 2px;
+}
+
+.tab {
+    padding: 7px 14px;
+    border-radius: calc(var(--radius) - 3px);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-500);
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.tab:hover {
+    color: var(--ink-900);
+}
+
+.tab.is-active {
+    background: var(--surface);
+    color: var(--ink-900);
+    box-shadow: var(--shadow-sm);
+}
+
+.habit-card__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.habit-card__menu-wrap {
+    position: relative;
+}
+
+.habit-card__menu-btn {
+    padding: 4px 10px;
+    border-radius: var(--radius);
+    color: var(--ink-500);
+    font-size: 18px;
+    line-height: 1;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.habit-card__menu-btn:hover {
+    background: var(--sage-50);
+    color: var(--ink-900);
+}
+
+.habit-card__menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+    min-width: 140px;
+    padding: 4px;
+    z-index: 10;
+}
+
+.habit-card__menu[hidden] {
+    display: none;
+}
+
+.habit-card__menu button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 14px;
+    color: var(--ink-700);
+    border-radius: calc(var(--radius) - 4px);
+    transition: background 0.12s ease;
+}
+
+.habit-card__menu button:hover {
+    background: var(--sage-50);
+}
+
+.habit-card__menu button.is-danger {
+    color: var(--red);
+}
+
+.habit-card__menu button.is-danger:hover {
+    background: #fdf3f2;
+}
+
+/* ---------- Calendar ---------- */
+.cal__head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+}
+
+.cal__picker {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cal__picker select {
+    padding: 9px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    font-family: inherit;
+    font-size: 14px;
+    min-width: 200px;
+}
+
+.cal__picker select:focus {
+    outline: none;
+    border-color: var(--sage-400);
+}
+
+.cal__nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.cal__month {
+    min-width: 120px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 15px;
+}
+
+/* Grid */
+.cal {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+}
+
+.cal__dow {
+    font-size: 12px;
+    color: var(--ink-500);
+    text-align: center;
+    padding: 6px 0;
+    font-weight: 500;
+}
+
+.cal__day {
+    aspect-ratio: 1 / 1;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-700);
+    background: var(--surface);
+    position: relative;
+}
+
+.cal__day.is-blank {
+    border: none;
+    background: transparent;
+}
+
+.cal__day.is-completed {
+    background: var(--sage-200);
+    border-color: var(--sage-300);
+    color: var(--sage-700);
+}
+
+.cal__day.is-partial {
+    background: #fbf0d9;
+    border-color: #ecd39b;
+    color: #7a5a19;
+}
+
+.cal__day.is-missed {
+    background: #fbe3e1;
+    border-color: #e7b4af;
+    color: #7a3129;
+}
+
+.cal__day.is-today {
+    box-shadow: 0 0 0 2px var(--sage-500);
+}
+
+/* Legend */
+.cal__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    margin-top: var(--space-4);
+    font-size: 12px;
+    color: var(--ink-500);
+}
+
+.cal__legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cal__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    border: 1px solid var(--line);
+}
+
+.cal__dot.is-completed { background: var(--sage-200); border-color: var(--sage-300); }
+.cal__dot.is-partial   { background: #fbf0d9;        border-color: #ecd39b; }
+.cal__dot.is-missed    { background: #fbe3e1;        border-color: #e7b4af; }
+.cal__dot.is-empty     { background: var(--surface); }
