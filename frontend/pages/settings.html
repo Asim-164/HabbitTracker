@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings — HabbitTracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="app">
+
+    <aside class="app__sidebar">
+        <div class="app__brand">HabbitTracker</div>
+
+        <nav class="app__nav">
+            <a href="/pages/dashboard.html" class="app__nav-item">Dashboard</a>
+            <a href="/pages/habits.html" class="app__nav-item">My Habits</a>
+            <a href="/pages/tracking.html" class="app__nav-item">Daily Tracking</a>
+            <a href="/pages/calendar.html" class="app__nav-item">Calendar</a>
+            <a href="/pages/statistics.html" class="app__nav-item">Statistics</a>
+            <a href="/pages/reflections.html" class="app__nav-item">Reflections</a>
+            <a href="/pages/settings.html" class="app__nav-item is-active">Settings</a>
+        </nav>
+
+        <button type="button" class="app__logout" id="logout-btn">Logout</button>
+    </aside>
+
+    <main class="app__main">
+        <header class="app__header">
+            <h1 class="app__page-title">Settings</h1>
+            <div class="app__user" id="user-name">—</div>
+        </header>
+
+        <div class="app__content">
+
+            <!-- Profile section -->
+            <section class="panel">
+                <h3 class="panel__title">Profile</h3>
+                <form id="profile-form" class="habit-form" style="max-width: 520px;">
+                    <label class="habit-form__field">
+                        <span>Name</span>
+                        <input type="text" name="name" required maxlength="100">
+                    </label>
+
+                    <label class="habit-form__field">
+                        <span>Email</span>
+                        <input type="email" name="email" required>
+                    </label>
+
+                    <div class="habit-form__actions">
+                        <button type="submit" class="btn-primary">Save Profile</button>
+                    </div>
+                    <p class="habit-form__msg" id="profile-msg"></p>
+                </form>
+            </section>
+
+            <!-- Change password section -->
+            <section class="panel">
+                <h3 class="panel__title">Change Password</h3>
+                <form id="password-form" class="habit-form" style="max-width: 520px;">
+                    <label class="habit-form__field">
+                        <span>Current password</span>
+                        <input type="password" name="currentPassword" required autocomplete="current-password">
+                    </label>
+
+                    <label class="habit-form__field">
+                        <span>New password</span>
+                        <input type="password" name="newPassword" required minlength="6" autocomplete="new-password">
+                    </label>
+
+                    <label class="habit-form__field">
+                        <span>Confirm new password</span>
+                        <input type="password" name="confirmPassword" required minlength="6" autocomplete="new-password">
+                    </label>
+
+                    <div class="habit-form__actions">
+                        <button type="submit" class="btn-primary">Update Password</button>
+                    </div>
+                    <p class="habit-form__msg" id="password-msg"></p>
+                </form>
+            </section>
+
+        </div>
+    </main>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/settings.js"></script>
+</body>
+</html>
