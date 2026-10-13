@@ -50,7 +50,7 @@ html, body {
 
 body {
     font-family: var(--font);
-    font-size: 15px;
+    font-size: 16px;
     line-height: 1.5;
     color: var(--ink-900);
     background: var(--bg);
@@ -64,9 +64,9 @@ h1, h2, h3, h4 {
     color: var(--ink-900);
 }
 
-h1 { font-size: 28px; line-height: 1.2; }
-h2 { font-size: 20px; }
-h3 { font-size: 16px; }
+h1 { font-size: 30px; line-height: 1.2; }
+h2 { font-size: 22px; }
+h3 { font-size: 17px; }
 h4 { font-size: 14px; }
 
 p { margin: 0; }
@@ -95,7 +95,7 @@ input, textarea, select {
 
 /* ---------- Utility classes ---------- */
 .muted { color: var(--ink-500); }
-.small { font-size: 13px; }
+.small { font-size: 14px; }
 
 /* ---------- Landing ---------- */
 .landing {
@@ -372,7 +372,7 @@ input, textarea, select {
     padding: 10px 14px;
     border-radius: var(--radius);
     color: var(--ink-700);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 500;
     transition: background 0.12s ease, color 0.12s ease;
 }
@@ -433,7 +433,7 @@ input, textarea, select {
     padding: var(--space-6);
     display: flex;
     flex-direction: column;
-    gap: var(--space-5);
+    gap: var(--space-6);
 }
 
 .app__welcome {
@@ -445,7 +445,7 @@ input, textarea, select {
 .cards {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: var(--space-4);
+    gap: var(--space-5);
 }
 
 .card {
@@ -461,7 +461,7 @@ input, textarea, select {
 }
 
 .card__label {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 500;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -469,7 +469,7 @@ input, textarea, select {
 }
 
 .card__value {
-    font-size: 26px;
+    font-size: 28px;
     font-weight: 600;
     letter-spacing: -0.01em;
     color: var(--ink-900);
@@ -485,7 +485,7 @@ input, textarea, select {
 }
 
 .panel__title {
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 600;
     letter-spacing: -0.005em;
     margin-bottom: var(--space-4);
@@ -494,7 +494,7 @@ input, textarea, select {
 .stack {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: var(--space-4);
 }
 
 /* ---------- Responsive ---------- */
@@ -561,8 +561,9 @@ input, textarea, select {
 }
 
 .habit-card__meta {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--ink-500);
+    line-height: 1.4;
 }
 
 .habit-card__bar {
@@ -652,7 +653,7 @@ input, textarea, select {
     padding: var(--space-4);
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: var(--space-4);
     background: var(--surface);
 }
 
@@ -701,9 +702,12 @@ input, textarea, select {
     border: 1px solid var(--line);
     border-radius: var(--radius);
     width: 100px;
+    min-width: 100px;
+    max-width: 140px;
     font-family: inherit;
-    font-size: 14px;
+    font-size: 15px;
     background: var(--sage-50);
+    box-sizing: border-box;
 }
 
 .track-row__input:focus {
@@ -1258,7 +1262,7 @@ input, textarea, select {
     display: flex;
     align-items: flex-start;
     gap: var(--space-4);
-    padding: var(--space-4) var(--space-5);
+    padding: var(--space-5) var(--space-5);
     border: 1px solid var(--line);
     border-radius: var(--radius);
     background: var(--surface);
@@ -1435,10 +1439,10 @@ input, textarea, select {
 .perf__row {
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    padding: var(--space-3) var(--space-4);
+    padding: var(--space-4) var(--space-5);
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
+    gap: var(--space-3);
 }
 
 .perf__head {

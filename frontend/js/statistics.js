@@ -22,8 +22,8 @@
 
     let groupBy = "week";
 
-    function pct(v) {
-        if (v === null || v === undefined) return "—";
+        function pct(v) {
+        if (v === null || v === undefined) return "0%";
         return Math.round(v * 100) + "%";
     }
 
