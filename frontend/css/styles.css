@@ -368,13 +368,31 @@ input, textarea, select {
 }
 
 .app__nav-item {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 10px;
     padding: 10px 14px;
     border-radius: var(--radius);
     color: var(--ink-700);
     font-size: 15px;
     font-weight: 500;
     transition: background 0.12s ease, color 0.12s ease;
+}
+
+.app__nav-item svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+    opacity: 0.75;
+}
+
+.app__nav-item.is-active svg {
+    opacity: 1;
 }
 
 .app__nav-item:hover {
@@ -393,10 +411,24 @@ input, textarea, select {
     border-radius: var(--radius);
     background: var(--surface);
     color: var(--ink-500);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 500;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
     transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.app__logout svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
 }
 
 .app__logout:hover {
@@ -425,8 +457,22 @@ input, textarea, select {
 }
 
 .app__user {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     font-size: 14px;
     color: var(--ink-500);
+}
+
+.app__user svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.75;
 }
 
 .app__content {
