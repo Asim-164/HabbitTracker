@@ -363,13 +363,13 @@ input, textarea, select {
 .app__nav {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
     flex: 1;
 }
 
 .app__nav-item {
     display: block;
-    padding: 9px 12px;
+    padding: 10px 14px;
     border-radius: var(--radius);
     color: var(--ink-700);
     font-size: 14px;
@@ -388,18 +388,21 @@ input, textarea, select {
 }
 
 .app__logout {
-    padding: 9px 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--line);
     border-radius: var(--radius);
+    background: var(--surface);
     color: var(--ink-500);
     font-size: 14px;
     font-weight: 500;
-    text-align: left;
-    transition: background 0.12s ease, color 0.12s ease;
+    text-align: center;
+    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
 }
 
 .app__logout:hover {
-    background: var(--sage-100);
-    color: var(--ink-900);
+    background: #fdf3f2;
+    color: var(--red);
+    border-color: #e7b4af;
 }
 
 .app__main {
@@ -449,21 +452,28 @@ input, textarea, select {
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    padding: var(--space-4) var(--space-5);
+    padding: var(--space-5);
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
+    gap: var(--space-3);
+    min-height: 96px;
+    justify-content: space-between;
 }
 
 .card__label {
-    font-size: 13px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     color: var(--ink-500);
 }
 
 .card__value {
-    font-size: 22px;
+    font-size: 26px;
     font-weight: 600;
+    letter-spacing: -0.01em;
     color: var(--ink-900);
+    line-height: 1;
 }
 
 /* ---------- Panels ---------- */
@@ -471,11 +481,13 @@ input, textarea, select {
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    padding: var(--space-5);
+    padding: var(--space-5) var(--space-6);
 }
 
 .panel__title {
-    font-size: 16px;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
     margin-bottom: var(--space-4);
 }
 
@@ -515,10 +527,10 @@ input, textarea, select {
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    padding: var(--space-4) var(--space-5);
+    padding: var(--space-3) var(--space-5);
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: var(--space-1);
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -1335,8 +1347,8 @@ input, textarea, select {
     align-items: flex-end;
     justify-content: space-between;
     gap: var(--space-2);
-    height: 160px;
-    padding: var(--space-3) 0;
+    height: 120px;
+    padding: var(--space-2) 0 0;
 }
 
 .chart__bar-wrap {
