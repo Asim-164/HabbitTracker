@@ -84,20 +84,52 @@
         });
     }
 
+    function fillStats(days, streakData) {
+        const logged = days.filter((d) => d.status !== null);
+        const completed = days.filter((d) => d.status === "Completed").length;
+        const rate = logged.length === 0 ? 0 : Math.round((completed / logged.length) * 100);
+
+        document.getElementById("month-logged").textContent =
+            `${logged.length} / ${days.length}`;
+
+        document.getElementById("month-completed").textContent = completed;
+
+        document.getElementById("month-rate").textContent = `${rate}%`;
+
+        document.getElementById("month-streak").textContent =
+            streakData && streakData.currentStreak !== undefined
+                ? `🔥 ${streakData.currentStreak} ${streakData.currentStreak === 1 ? "day" : "days"}`
+                : "—";
+    }
+
+    function clearStats() {
+        ["month-logged", "month-completed", "month-rate", "month-streak"]
+            .forEach((id) => document.getElementById(id).textContent = "—");
+    }
+
     async function load() {
         const habitId = habitSelect.value;
         if (!habitId) {
             calendar.innerHTML = "";
             monthLabel.textContent = "—";
+            clearStats();
             return;
         }
 
         monthLabel.textContent = monthLabelText(currentMonth);
         calendar.innerHTML = `<p class="muted small">Loading…</p>`;
+        clearStats();
 
         try {
             const data = await api.get(`/stats/calendar?habitId=${habitId}&month=${currentMonth}`);
             renderGrid(currentMonth, data.days);
+
+            let streakData = null;
+            try {
+                streakData = await api.get(`/habits/${habitId}/streak`);
+            } catch (_) {}
+
+            fillStats(data.days, streakData);
         } catch (err) {
             calendar.innerHTML = `<p class="muted small">Could not load calendar: ${err.message}</p>`;
         }

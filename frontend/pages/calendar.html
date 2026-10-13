@@ -50,12 +50,30 @@
 
             <section class="panel">
                 <div class="cal" id="calendar"></div>
-
                 <div class="cal__legend">
                     <span class="cal__legend-item"><span class="cal__dot is-completed"></span> Completed</span>
                     <span class="cal__legend-item"><span class="cal__dot is-partial"></span> Partial</span>
                     <span class="cal__legend-item"><span class="cal__dot is-missed"></span> Missed</span>
                     <span class="cal__legend-item"><span class="cal__dot is-empty"></span> No log</span>
+                </div>
+            </section>
+
+            <section class="cards" id="month-stats">
+                <div class="card">
+                    <div class="card__label">Days Logged</div>
+                    <div class="card__value" id="month-logged">—</div>
+                </div>
+                <div class="card">
+                    <div class="card__label">Completed</div>
+                    <div class="card__value" id="month-completed">—</div>
+                </div>
+                <div class="card">
+                    <div class="card__label">Completion Rate</div>
+                    <div class="card__value" id="month-rate">—</div>
+                </div>
+                <div class="card">
+                    <div class="card__label">Current Streak</div>
+                    <div class="card__value" id="month-streak">—</div>
                 </div>
             </section>
         </div>
