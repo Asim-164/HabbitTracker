@@ -80,8 +80,12 @@
             el.className = "cal__day " + statusClass(day.status);
             if (day.date === today) el.classList.add("is-today");
             el.textContent = Number(day.date.slice(8, 10));
+            el.addEventListener("click", () => {
+                window.location.href = `/pages/tracking.html?date=${day.date}`;
+            });
             calendar.appendChild(el);
         });
+        
     }
 
     function fillStats(days, streakData) {

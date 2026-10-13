@@ -25,7 +25,14 @@
         return `${y}-${m}-${day}`;
     }
 
-    dateInput.value = todayString();
+    const params = new URLSearchParams(window.location.search);
+    const dateParam = params.get("date");
+
+    if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+        dateInput.value = dateParam;
+    } else {
+        dateInput.value = todayString();
+    }
 
     function statusText(log) {
         if (!log) return { cls: "is-empty", icon: "◯", label: "Not logged" };
