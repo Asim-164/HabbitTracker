@@ -448,8 +448,38 @@ input, textarea, select {
     align-items: center;
     justify-content: space-between;
     padding: var(--space-5) var(--space-6);
-    border-bottom: 1px solid var(--line);
-    background: var(--surface);
+    border-bottom: 1px solid var(--sage-200);
+    background: var(--sage-50);
+    gap: var(--space-4);
+}
+
+.app__header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.app__header-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--sage-100);
+    border: 1px solid var(--sage-200);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--sage-700);
+    flex-shrink: 0;
+}
+
+.app__header-icon svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 .app__page-title {
