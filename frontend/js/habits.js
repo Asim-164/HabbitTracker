@@ -217,10 +217,9 @@
 
             card.innerHTML = `
                 <div class="habit-card__head">
-                    <div>
+                    <div class="habit-card__title-wrap">
                         <div class="habit-card__name">${habit.Name}</div>
-                        <div class="habit-card__meta">${meta}</div>
-                        ${habit.Description ? `<div class="habit-card__meta">${habit.Description}</div>` : ""}
+                        <div class="habit-card__streak">🔥 ${streak.currentStreak} ${streak.currentStreak === 1 ? "day" : "days"} • 🏆 ${streak.longestStreak}</div>
                     </div>
                     <div class="habit-card__menu-wrap">
                         <button type="button" class="habit-card__menu-btn" aria-label="More actions">⋯</button>
@@ -231,10 +230,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="habit-card__top">
-                    <div class="habit-card__meta">Status: ${habit.Status}</div>
-                    <div class="habit-card__streak">🔥 ${streak.currentStreak} ${streak.currentStreak === 1 ? "day" : "days"} • 🏆 ${streak.longestStreak}</div>
-                </div>
+                <div class="habit-card__meta">${meta}${habit.Status !== "Active" ? " • " + habit.Status : ""}</div>
+                ${habit.Description ? `<div class="habit-card__desc">${habit.Description}</div>` : ""}
             `;
 
             const menuBtn = card.querySelector(".habit-card__menu-btn");
@@ -296,6 +293,72 @@
             }
         }
 
+        function fillHighlights() {
+            const activeHabits = allHabits.filter((h) => h.Status === "Active");
+
+            if (activeHabits.length === 0) {
+                document.getElementById("hi-streak").textContent = "—";
+                document.getElementById("hi-streak-habit").textContent = "No active habits";
+                document.getElementById("hi-consist").textContent = "—";
+                document.getElementById("hi-consist-habit").textContent = "—";
+                document.getElementById("hi-today").textContent = "0";
+                document.getElementById("hi-today-sub").textContent = "No active habits";
+                return;
+            }
+
+            // Best streak
+            let bestStreak = 0;
+            let bestStreakHabit = "";
+            let bestConsist = -1;
+            let bestConsistHabit = "";
+            let bestConsistPct = 0;
+
+            const todayStr = (() => {
+                const d = new Date();
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+            })();
+
+            let loggedToday = 0;
+
+            activeHabits.forEach((h) => {
+                const s = streaksByHabit.get(h.HabitID) || { currentStreak: 0 };
+                if (s.currentStreak > bestStreak) {
+                    bestStreak = s.currentStreak;
+                    bestStreakHabit = h.Name;
+                }
+
+                const logs = logsByHabit.get(h.HabitID) || [];
+                const logged = logs.filter((l) => l.Status !== null && l.Status !== undefined);
+                if (logged.length > 0) {
+                    const completed = logged.filter((l) => l.Status === "Completed").length;
+                    const pct = completed / logged.length;
+                    if (pct > bestConsist) {
+                        bestConsist = pct;
+                        bestConsistHabit = h.Name;
+                        bestConsistPct = Math.round(pct * 100);
+                    }
+                }
+
+                const todayLog = logs.find((l) => (l.Date || "").slice(0, 10) === todayStr);
+                if (todayLog) loggedToday += 1;
+            });
+
+            document.getElementById("hi-streak").textContent =
+                bestStreak > 0 ? `${bestStreak} ${bestStreak === 1 ? "day" : "days"}` : "0 days";
+            document.getElementById("hi-streak-habit").textContent =
+                bestStreak > 0 ? bestStreakHabit : "No streak yet";
+
+            document.getElementById("hi-consist").textContent =
+                bestConsist >= 0 ? `${bestConsistPct}%` : "—";
+            document.getElementById("hi-consist-habit").textContent =
+                bestConsist >= 0 ? bestConsistHabit : "No logs yet";
+
+            document.getElementById("hi-today").textContent =
+                `${loggedToday} / ${activeHabits.length}`;
+            document.getElementById("hi-today-sub").textContent =
+                `of ${activeHabits.length} active habit${activeHabits.length === 1 ? "" : "s"}`;
+        }
+
         async function load() {
             list.innerHTML = `<p class="muted small">Loading…</p>`;
             try {
@@ -316,6 +379,7 @@
                     streaksByHabit.set(r.habitId, r.streak);
                 });
 
+                fillHighlights();
                 render();
             } catch (err) {
                 list.innerHTML = `<p class="muted small">Could not load habits: ${err.message}</p>`;

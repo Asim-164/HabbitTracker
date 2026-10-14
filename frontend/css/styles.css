@@ -522,6 +522,13 @@ input, textarea, select {
     line-height: 1;
 }
 
+.card__sub {
+    font-size: 13px;
+    color: var(--ink-500);
+    margin-top: -4px;
+    line-height: 1.3;
+}
+
 /* ---------- Panels ---------- */
 .panel {
     background: var(--surface);
@@ -594,7 +601,7 @@ input, textarea, select {
 
 .habit-card__name {
     font-weight: 600;
-    font-size: 15px;
+    font-size: 16px;
     color: var(--ink-900);
 }
 
@@ -607,8 +614,8 @@ input, textarea, select {
 }
 
 .habit-card__meta {
-    font-size: 14px;
-    color: var(--ink-500);
+    font-size: 15px;
+    color: var(--ink-700);
     line-height: 1.4;
 }
 
@@ -964,6 +971,20 @@ input, textarea, select {
     align-items: flex-start;
     justify-content: space-between;
     gap: var(--space-3);
+}
+
+.habit-card__title-wrap {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.habit-card__desc {
+    font-size: 14px;
+    color: var(--ink-500);
+    line-height: 1.4;
+    margin-top: 2px;
 }
 
 .habit-card__menu-wrap {
