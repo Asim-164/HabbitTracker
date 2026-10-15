@@ -14,6 +14,18 @@
         window.location.href = "/pages/login.html";
     });
 
+        // Show / hide password toggles
+    document.querySelectorAll(".password-toggle").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const input = btn.parentElement.querySelector("input");
+            if (!input) return;
+            const isPassword = input.type === "password";
+            input.type = isPassword ? "text" : "password";
+            btn.setAttribute("aria-label", isPassword ? "Hide password" : "Show password");
+        });
+    });
+
+
     const profileForm = document.getElementById("profile-form");
     const profileMsg = document.getElementById("profile-msg");
     const passwordForm = document.getElementById("password-form");

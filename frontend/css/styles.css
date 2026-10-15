@@ -921,6 +921,46 @@ input, textarea, select {
     background: #fff;
 }
 
+.password-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-wrap input {
+    padding-right: 42px;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-500);
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.password-toggle:hover {
+    background: var(--sage-50);
+    color: var(--ink-900);
+}
+
+.password-toggle svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
 .habit-form__check {
     display: inline-flex;
     align-items: center;

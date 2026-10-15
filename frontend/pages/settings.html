@@ -89,29 +89,46 @@
             </section>
 
             <!-- Change password section -->
-            <section class="panel">
-                <h3 class="panel__title">Change Password</h3>
-                <form id="password-form" class="habit-form" style="max-width: 520px;">
-                    <label class="habit-form__field">
-                        <span>Current password</span>
-                        <input type="password" name="currentPassword" required autocomplete="current-password">
-                    </label>
+<section class="panel">
+    <h3 class="panel__title">Change Password</h3>
+    <form id="password-form" class="habit-form" style="max-width: 520px;">
 
-                    <label class="habit-form__field">
-                        <span>New password</span>
-                        <input type="password" name="newPassword" required minlength="6" autocomplete="new-password">
-                    </label>
+        <label class="habit-form__field">
+            <span>Current password</span>
+            <div class="password-wrap">
+                <input type="password" name="currentPassword" required autocomplete="current-password">
+                <button type="button" class="password-toggle" aria-label="Show password">
+                    <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+            </div>
+        </label>
 
-                    <label class="habit-form__field">
-                        <span>Confirm new password</span>
-                        <input type="password" name="confirmPassword" required minlength="6" autocomplete="new-password">
-                    </label>
+        <label class="habit-form__field">
+            <span>New password</span>
+            <div class="password-wrap">
+                <input type="password" name="newPassword" required minlength="6" autocomplete="new-password">
+                <button type="button" class="password-toggle" aria-label="Show password">
+                    <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+            </div>
+        </label>
 
-                    <div class="habit-form__actions">
-                        <button type="submit" class="btn-primary">Update Password</button>
-                    </div>
-                    <p class="habit-form__msg" id="password-msg"></p>
-                </form>
+        <label class="habit-form__field">
+            <span>Confirm new password</span>
+            <div class="password-wrap">
+                <input type="password" name="confirmPassword" required minlength="6" autocomplete="new-password">
+                <button type="button" class="password-toggle" aria-label="Show password">
+                    <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+            </div>
+        </label>
+
+        <div class="habit-form__actions">
+            <button type="submit" class="btn-primary">Update Password</button>
+        </div>
+        <p class="habit-form__msg" id="password-msg"></p>
+    </form>
+</section>
             </section>
 
         </div>
