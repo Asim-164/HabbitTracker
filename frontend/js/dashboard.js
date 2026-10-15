@@ -138,18 +138,31 @@
                     const logs = await api.get(`/habit-logs?habitId=${h.HabitID}`);
                     logs.forEach((l) => allLogs.push({
                         date: (l.Date || "").slice(0, 10),
-                        status: l.Status
+                        status: l.Status,
+                        actual: Number(l.ActualValue || 0),
+                        target: h.TargetValue !== null ? Number(h.TargetValue) : 0
                     }));
                 } catch (_) {}
             }
 
-            // For each day: completed / totalLogs
-            const today = new Date().toISOString().slice(0, 10);
+            // For each day: average of (min(actual, target) / target) across logged habits that day
             const bars = days.map((d) => {
                 const dayLogs = allLogs.filter((l) => l.date === d.date);
-                const completed = dayLogs.filter((l) => l.status === "Completed").length;
-                const rate = dayLogs.length === 0 ? 0 : completed / dayLogs.length;
-                return { label: d.label, rate, empty: dayLogs.length === 0 };
+                if (dayLogs.length === 0) {
+                    return { label: d.label, rate: 0, empty: true };
+                }
+                let sum = 0;
+                for (const log of dayLogs) {
+                    const target = log.target;
+                    if (!target || target <= 0) {
+                        // Non-measurable habit: Completed = 1, else 0
+                        sum += log.status === "Completed" ? 1 : 0;
+                    } else {
+                        sum += Math.min((log.actual || 0) / target, 1);
+                    }
+                }
+                const rate = sum / dayLogs.length;
+                return { label: d.label, rate, empty: false };
             });
 
             el.innerHTML = bars.map((b) => `
@@ -195,15 +208,26 @@
                     ? `${r ? r.totalActual : 0} / ${r ? r.totalTarget : 0} ${habit.Unit || ""}`.trim()
                     : "—";
 
+                const target = habit.TargetValue !== null ? Number(habit.TargetValue) : 0;
+                const targetPct = (() => {
+                    if (!r || target <= 0 || r.logsInRange === 0) return null;
+                    // Average of (min(actual, target) / target) across logged days
+                    // We approximate using totalActual / (target × logsInRange), capped at 1
+                    const ratio = Math.min(r.totalActual / (target * r.logsInRange), 1);
+                    return Math.round(ratio * 100);
+                })();
+
                 const row = document.createElement("div");
                 row.className = "perf__row";
                 row.innerHTML = `
                     <div class="perf__head">
                         <div class="perf__name">${habit.Name}</div>
-                        <div class="perf__pct">${r && r.completionRate !== null ? pct + "%" : "—"}</div>
+                        <div class="perf__pct">
+                            ${targetPct !== null ? targetPct + "% of target" : "—"}
+                        </div>
                     </div>
                     <div class="perf__bar">
-                        <div class="perf__bar-fill" style="width:${pct}%"></div>
+                        <div class="perf__bar-fill" style="width:${targetPct !== null ? targetPct : 0}%"></div>
                     </div>
                     <div class="perf__meta">
                         <span>${actualText}</span>

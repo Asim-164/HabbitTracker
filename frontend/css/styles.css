@@ -1569,6 +1569,11 @@ input, textarea, select {
     color: var(--ink-700);
 }
 
+.perf__pct-sep {
+    color: var(--ink-300);
+    margin: 0 2px;
+}
+
 .perf__bar {
     height: 6px;
     background: var(--sage-100);

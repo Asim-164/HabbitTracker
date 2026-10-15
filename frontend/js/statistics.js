@@ -101,6 +101,12 @@
 
             const rows = perHabit.map(({ habit, stats }) => {
                 const r = stats ? stats.range : null;
+                const target = habit.TargetValue !== null ? Number(habit.TargetValue) : 0;
+                const targetPct = (() => {
+                    if (!r || target <= 0 || r.logsInRange === 0) return "—";
+                    const ratio = Math.min(r.totalActual / (target * r.logsInRange), 1);
+                    return Math.round(ratio * 100) + "%";
+                })();
                 return `
                     <tr>
                         <td>${habit.Name}</td>
@@ -109,6 +115,7 @@
                         <td class="num">${r ? r.partialCount : "—"}</td>
                         <td class="num">${r ? r.missedCount : "—"}</td>
                         <td class="num">${r ? `${r.totalActual} / ${r.totalTarget ?? "—"}` : "—"}</td>
+                        <td class="num">${targetPct}</td>
                         <td class="num">${r ? pct(r.completionRate) : "—"}</td>
                         <td class="num">${r ? pct(r.consistencyRate) : "—"}</td>
                     </tr>
@@ -126,6 +133,7 @@
                                 <th class="num">Partial</th>
                                 <th class="num">Missed</th>
                                 <th class="num">Actual / Target</th>
+                                <th class="num">% of Target</th>
                                 <th class="num">Completion</th>
                                 <th class="num">Consistency</th>
                             </tr>
