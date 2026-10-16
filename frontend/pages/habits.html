@@ -103,6 +103,19 @@
         </div>
     </main>
 
+    <!-- Confirm dialog -->
+    <div class="modal" id="confirm-modal" hidden>
+        <div class="modal__backdrop" data-confirm-cancel></div>
+        <div class="modal__box modal__box--sm">
+            <h3 class="modal__title" id="confirm-title">Are you sure?</h3>
+            <p class="muted" id="confirm-message" style="margin-bottom: var(--space-5);">This action cannot be undone.</p>
+            <div class="habit-form__actions">
+                <button type="button" class="btn-secondary" data-confirm-cancel>Cancel</button>
+                <button type="button" class="btn-danger" id="confirm-ok">Delete</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/js/api.js"></script>
     <script src="/js/habits.js"></script>
 </body>

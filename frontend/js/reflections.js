@@ -78,17 +78,15 @@
         el.innerHTML = `
             <div class="reflection__mood">${MOOD_EMOJI[r.Mood] || "•"}</div>
             <div class="reflection__body">
-                <div class="reflection__head">
-                    <div>
-                        <span class="reflection__date">${formatDate(r.Date)}</span>
-                        <span class="reflection__mood-label"> · ${r.Mood}</span>
-                    </div>
-                    <div class="reflection__actions">
-                        <button type="button" class="reflection__action" data-action="edit">Edit</button>
-                        <button type="button" class="reflection__action is-danger" data-action="delete">Delete</button>
-                    </div>
+                <div>
+                    <span class="reflection__date">${formatDate(r.Date)}</span>
+                    <span class="reflection__mood-label">${r.Mood}</span>
                 </div>
                 ${r.Notes ? `<div class="reflection__notes">${r.Notes}</div>` : ""}
+            </div>
+            <div class="reflection__actions">
+                <button type="button" class="reflection__action" data-action="edit" aria-label="Edit">✎</button>
+                <button type="button" class="reflection__action is-danger" data-action="delete" aria-label="Delete">✕</button>
             </div>
         `;
 
@@ -97,7 +95,12 @@
                 if (btn.dataset.action === "edit") {
                     openModal(r);
                 } else if (btn.dataset.action === "delete") {
-                    if (confirm("Delete this reflection?")) {
+                    const yes = await confirmDialog({
+                        title: "Delete this reflection?",
+                        message: "This reflection will be permanently removed. This cannot be undone.",
+                        confirmLabel: "Delete"
+                    });
+                    if (yes) {
                         try {
                             await api.delete("/reflections/" + r.ReflectionID);
                             await load();
@@ -112,10 +115,55 @@
         return el;
     }
 
+    function moodClass(mood) {
+        if (mood === "Great") return "is-great";
+        if (mood === "Good")  return "is-good";
+        if (mood === "Okay")  return "is-okay";
+        if (mood === "Meh")   return "is-meh";
+        if (mood === "Bad")   return "is-bad";
+        return "is-none";
+    }
+
+    function renderMoodStrip(reflections) {
+        const container = document.getElementById("mood-dots");
+        const label = document.getElementById("mood-month");
+        if (!container) return;
+
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const today = now.getDate();
+
+        const monthName = now.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+        label.textContent = monthName;
+
+        const moodByDay = new Map();
+        for (const r of reflections) {
+            const d = new Date(r.Date);
+            if (d.getFullYear() === year && d.getMonth() === month) {
+                moodByDay.set(d.getDate(), r.Mood);
+            }
+        }
+
+        container.innerHTML = "";
+        for (let day = 1; day <= daysInMonth; day += 1) {
+            const mood = moodByDay.get(day);
+            const el = document.createElement("div");
+            el.className = "mood-day " + (mood ? moodClass(mood) : "is-none");
+            if (day === today) el.classList.add("is-today");
+            el.textContent = day;
+            el.title = mood ? `Day ${day}: ${mood}` : `Day ${day}: no entry`;
+            container.appendChild(el);
+        }
+    }
+
     async function load() {
         list.innerHTML = `<p class="muted small">Loading…</p>`;
         try {
             const reflections = await api.get("/reflections");
+            renderMoodStrip(reflections);
+
             if (!reflections.length) {
                 list.innerHTML = `<p class="muted small">No reflections yet. Add one to get started.</p>`;
                 return;

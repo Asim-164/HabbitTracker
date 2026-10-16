@@ -67,3 +67,34 @@ const api = {
     put:    (path, body)  => apiRequest(path, { method: "PUT", body }),
     delete: (path)        => apiRequest(path, { method: "DELETE" })
 };
+
+function confirmDialog({ title, message, confirmLabel }) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById("confirm-modal");
+        if (!modal) {
+            // Fallback to native confirm if modal not on this page
+            resolve(window.confirm(message || title || "Are you sure?"));
+            return;
+        }
+
+        document.getElementById("confirm-title").textContent = title || "Are you sure?";
+        document.getElementById("confirm-message").textContent = message || "";
+        document.getElementById("confirm-ok").textContent = confirmLabel || "Delete";
+
+        modal.removeAttribute("hidden");
+
+        function cleanup() {
+            modal.setAttribute("hidden", "");
+            ok.removeEventListener("click", onOk);
+            cancelEls.forEach((el) => el.removeEventListener("click", onCancel));
+        }
+        function onOk() { cleanup(); resolve(true); }
+        function onCancel() { cleanup(); resolve(false); }
+
+        const ok = document.getElementById("confirm-ok");
+        const cancelEls = modal.querySelectorAll("[data-confirm-cancel]");
+
+        ok.addEventListener("click", onOk);
+        cancelEls.forEach((el) => el.addEventListener("click", onCancel));
+    });
+}

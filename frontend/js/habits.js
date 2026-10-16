@@ -254,8 +254,21 @@
                     window.location.href = `/pages/habit-form.html?id=${habit.HabitID}`;
                 } else if (action === "archive") {
                     await toggleArchive(habit);
-                } else if (action === "delete") {
-                    if (confirm(`Delete "${habit.Name}"? This cannot be undone.`)) {
+                                } else if (action === "delete") {
+                    const logs = logsByHabit.get(habit.HabitID) || [];
+                    const hasLogs = logs.length > 0;
+
+                    const message = hasLogs
+                        ? `"${habit.Name}" has ${logs.length} log${logs.length === 1 ? "" : "s"} that will be removed along with it. This cannot be undone.`
+                        : `"${habit.Name}" will be permanently removed. This cannot be undone.`;
+
+                    const yes = await confirmDialog({
+                        title: `Delete "${habit.Name}"?`,
+                        message,
+                        confirmLabel: hasLogs ? "Delete anyway" : "Delete"
+                    });
+
+                    if (yes) {
                         await deleteHabit(habit.HabitID);
                     }
                 }
@@ -289,7 +302,22 @@
                 await api.delete("/habits/" + id);
                 await load();
             } catch (err) {
-                alert("Failed to delete: " + err.message);
+                // 500 from the FK constraint → habit has logs
+                if (err.status === 500) {
+                    const habit = allHabits.find((h) => h.HabitID === id);
+                    if (!habit) return;
+
+                    const yes = await confirmDialog({
+                        title: "Can't delete this habit",
+                        message: `"${habit.Name}" has logs and can't be deleted. Archive it instead — you'll keep the history and can restore it anytime.`,
+                        confirmLabel: "Archive"
+                    });
+                    if (yes) {
+                        await toggleArchive(habit);
+                    }
+                } else {
+                    alert("Failed to delete: " + err.message);
+                }
             }
         }
 
