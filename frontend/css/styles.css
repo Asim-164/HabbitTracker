@@ -2047,3 +2047,95 @@ input, textarea, select {
     color: var(--ink-900);
     font-weight: 500;
 }
+
+/* ---------- Habit Form Polish ---------- */
+.habit-form__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    cursor: pointer;
+    user-select: none;
+    padding: var(--space-2) 0;
+}
+
+.habit-form__toggle input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    background: var(--line);
+    border-radius: 999px;
+    transition: background 0.2s ease;
+    flex-shrink: 0;
+}
+
+.toggle-switch::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--surface);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    transition: transform 0.2s ease;
+}
+
+.habit-form__toggle input:checked + .toggle-switch {
+    background: var(--sage-500);
+}
+
+.habit-form__toggle input:checked + .toggle-switch::after {
+    transform: translateX(18px);
+}
+
+.toggle-label {
+    font-size: 14px;
+    color: var(--ink-700);
+    font-weight: 500;
+}
+
+/* Bigger, more comfortable form fields */
+.habit-form__field input,
+.habit-form__field select,
+.habit-form__field textarea {
+    padding: 12px 14px;
+    font-size: 15px;
+    transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.habit-form__field input:focus,
+.habit-form__field select:focus,
+.habit-form__field textarea:focus {
+    border-color: var(--sage-400);
+    background: var(--surface);
+    box-shadow: 0 0 0 3px rgba(124, 174, 124, 0.15);
+}
+
+/* Textarea: taller, softer */
+.habit-form__field textarea {
+    min-height: 80px;
+}
+
+/* Section divider before buttons */
+.habit-form__actions {
+    margin-top: var(--space-4);
+    padding-top: var(--space-5);
+}
+
+/* Save button bigger */
+.habit-form__actions .btn-primary {
+    padding: 12px 24px;
+    font-size: 15px;
+}
+
+.habit-form__actions .btn-secondary {
+    padding: 12px 24px;
+    font-size: 15px;
+}

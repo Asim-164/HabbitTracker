@@ -76,7 +76,7 @@
                         </label>
 
                         <label class="habit-form__field">
-                            <span>Frequency</span>
+                            <span>How often</span>
                             <select name="frequency">
                                 <option value="Daily">Daily</option>
                                 <option value="Weekly">Weekly</option>
@@ -89,19 +89,20 @@
                         <textarea name="description" rows="2" maxlength="500"></textarea>
                     </label>
 
-                    <label class="habit-form__check">
+                    <label class="habit-form__toggle">
                         <input type="checkbox" id="measurable" name="measurable">
-                        <span>Measure this habit with a numeric target</span>
+                        <span class="toggle-switch"></span>
+                        <span class="toggle-label">Set a daily goal</span>
                     </label>
 
                     <div class="habit-form__row" id="target-row" hidden>
                         <label class="habit-form__field">
-                            <span>Target value</span>
+                            <span>Daily target</span>
                             <input type="number" name="targetValue" min="0" step="1" placeholder="60">
                         </label>
 
                         <label class="habit-form__field">
-                            <span>Unit</span>
+                            <span>Unit (e.g., min, pages)</span>
                             <input type="text" name="unit" maxlength="30" placeholder="minutes">
                         </label>
                     </div>
