@@ -707,48 +707,104 @@ input, textarea, select {
 }
 
 /* ---------- Tracking ---------- */
+/* ---------- Tracking ---------- */
 .tracking__head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: var(--space-4);
+    margin-bottom: 0;
+}
+
+.tracking__date-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
 .tracking__date-label {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-500);
+    font-weight: 500;
 }
 
 .tracking__date {
-    padding: 9px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--surface);
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    background: var(--surface);
-    color: var(--ink-900);
-    font-family: inherit;
     font-size: 14px;
+    font-weight: 500;
+    color: var(--ink-900);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    width: auto;
+    min-width: 200px;
+}
+
+.tracking__date:hover {
+    border-color: var(--sage-300);
+    background: var(--sage-50);
+}
+
+.tracking__date-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+    padding: 0;
+    margin: 0;
+    border: none;
+}
+
+.tracking__date svg {
+    color: var(--ink-500);
+    flex-shrink: 0;
+}
+
+.tracking__date svg,
+.tracking__date #date-display {
+    pointer-events: none;
 }
 
 .track-row {
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    padding: var(--space-4);
+    padding: var(--space-4) var(--space-5);
     display: flex;
     flex-direction: column;
-    gap: var(--space-4);
+    gap: var(--space-3);
     background: var(--surface);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.track-row:hover {
+    border-color: var(--sage-300);
+    box-shadow: var(--shadow-sm);
 }
 
 .track-row__head {
     display: flex;
     justify-content: space-between;
+    align-items: flex-start;
     gap: var(--space-3);
+}
+
+.track-row__title-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
 .track-row__name {
     font-weight: 600;
-    font-size: 15px;
+    font-size: 16px;
+    color: var(--ink-900);
 }
 
 .track-row__meta {
@@ -756,16 +812,45 @@ input, textarea, select {
     color: var(--ink-500);
 }
 
-.track-row__status {
-    font-size: 13px;
+/* Status badge */
+.track-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 12px;
     font-weight: 500;
+    background: var(--sage-50);
+    color: var(--ink-500);
+    flex-shrink: 0;
 }
 
-.track-row__status.is-completed { color: var(--sage-600); }
-.track-row__status.is-partial   { color: var(--amber); }
-.track-row__status.is-missed    { color: var(--red); }
-.track-row__status.is-empty     { color: var(--ink-300); }
+.track-badge.is-completed { background: var(--sage-100); color: var(--sage-700); }
+.track-badge.is-partial   { background: #fbf0d9;        color: #7a5a19; }
+.track-badge.is-missed    { background: #fbe3e1;        color: #7a3129; }
+.track-badge.is-empty     { background: var(--sage-50); color: var(--ink-500); }
 
+/* Progress bar */
+.track-progress {
+    height: 6px;
+    background: var(--sage-50);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.track-progress__fill {
+    height: 100%;
+    background: var(--sage-500);
+    border-radius: 999px;
+    transition: width 0.3s ease;
+}
+
+.track-progress.is-partial   .track-progress__fill { background: var(--amber); }
+.track-progress.is-missed    .track-progress__fill { background: var(--red); }
+.track-progress.is-empty     .track-progress__fill { background: var(--sage-200); }
+
+/* Body: input + actions */
 .track-row__body {
     display: flex;
     align-items: center;
@@ -777,74 +862,151 @@ input, textarea, select {
 .track-row__inputs {
     display: flex;
     align-items: center;
+    gap: var(--space-3);
+}
+
+.track-row__actions {
+    display: flex;
+    align-items: center;
     gap: var(--space-2);
 }
 
-.track-row__input {
-    padding: 8px 10px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    width: 100px;
-    min-width: 100px;
-    max-width: 140px;
-    font-family: inherit;
-    font-size: 15px;
-    background: var(--sage-50);
-    box-sizing: border-box;
-}
-
-.track-row__input:focus {
-    outline: none;
-    border-color: var(--sage-400);
-    background: #fff;
-}
-
-.track-row__unit {
-    color: var(--ink-500);
-    font-size: 13px;
-}
-
-.track-row__yesno {
-    display: flex;
-    gap: var(--space-3);
-    font-size: 14px;
-    color: var(--ink-700);
-}
-
-.track-row__yesno label {
+/* Input */
+.track-input-wrap {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    cursor: pointer;
+    background: var(--sage-50);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    transition: border-color 0.15s ease, background 0.15s ease;
+    overflow: hidden;
 }
 
-.track-row__save {
-    padding: 8px 16px;
+.track-input-wrap:focus-within {
+    border-color: var(--sage-400);
+    background: var(--surface);
+}
+
+.track-input {
+    width: 70px;
+    padding: 10px 12px;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink-900);
+    text-align: center;
+    outline: none;
+    -moz-appearance: textfield;
+}
+
+.track-input::-webkit-outer-spin-button,
+.track-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.track-input__unit {
+    padding: 0 12px 0 0;
+    font-size: 13px;
+    color: var(--ink-500);
+    font-weight: 500;
+}
+
+/* Radio (for non-measurable habits) */
+.track-radio {
+    display: flex;
+    gap: var(--space-3);
+}
+
+.track-radio label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.track-radio label:hover {
+    border-color: var(--sage-300);
+    background: var(--sage-50);
+}
+
+.track-radio input[type="radio"] {
+    accent-color: var(--sage-500);
+}
+
+/* Note toggle + save */
+.track-note-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    color: var(--ink-500);
+    font-size: 13px;
+    font-weight: 500;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.track-note-toggle:hover {
+    background: var(--sage-50);
+    color: var(--ink-900);
+}
+
+.track-note-toggle.is-open {
+    color: var(--sage-700);
+    background: var(--sage-50);
+}
+
+.track-save {
+    padding: 10px 20px;
     background: var(--sage-500);
     color: #fff;
     border-radius: var(--radius);
-    font-weight: 500;
     font-size: 14px;
+    font-weight: 500;
+    transition: background 0.15s ease;
 }
 
-.track-row__save:hover {
+.track-save:hover {
     background: var(--sage-600);
 }
 
-.track-row__notes input {
+/* Notes area (collapsible) */
+.track-row__note {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease;
+}
+
+.track-row__note.is-open {
+    max-height: 200px;
+}
+
+.track-notes {
     width: 100%;
-    padding: 8px 10px;
+    padding: 10px 12px;
     border: 1px solid var(--line);
     border-radius: var(--radius);
     background: var(--sage-50);
+    color: var(--ink-900);
     font-family: inherit;
-    font-size: 13px;
+    font-size: 14px;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.15s ease, background 0.15s ease;
 }
 
-.track-row__notes input:focus {
-    outline: none;
+.track-notes:focus {
     border-color: var(--sage-400);
-    background: #fff;
+    background: var(--surface);
 }
 
 /* ---------- Buttons ---------- */
