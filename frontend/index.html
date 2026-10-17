@@ -25,4 +25,10 @@
         <a href="/pages/login.html" class="landing__cta">Get Started</a>
     </main>
 </body>
+    <script src="/js/api.js"></script>
+    <script>
+        // Force a fresh login if they navigate to the root URL
+        Auth.clear();
+    </script>
+</body>
 </html>

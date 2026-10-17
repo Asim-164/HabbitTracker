@@ -11,9 +11,9 @@
 
     document.getElementById("logout-btn").addEventListener("click", () => {
         Auth.clear();
-        window.location.href = "/pages/login.html";
+        window.location.replace("/pages/login.html");
     });
-
+    
         // ---- Route: My Habits list page ----
     if (document.getElementById("habits-list")) {
         initHabitsList();

@@ -898,6 +898,7 @@ input, textarea, select {
     color: var(--ink-900);
     text-align: center;
     outline: none;
+    appearance: textfield;
     -moz-appearance: textfield;
 }
 
@@ -2138,4 +2139,21 @@ input, textarea, select {
 .habit-form__actions .btn-secondary {
     padding: 12px 24px;
     font-size: 15px;
+}
+
+/* ---------- Loading Spinner ---------- */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.spinner {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
 }

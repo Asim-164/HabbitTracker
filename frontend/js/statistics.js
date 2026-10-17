@@ -11,7 +11,7 @@
 
     document.getElementById("logout-btn").addEventListener("click", () => {
         Auth.clear();
-        window.location.href = "/pages/login.html";
+        window.location.replace("/pages/login.html");
     });
 
     const summaryBlock = document.getElementById("summary-block");
