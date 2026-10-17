@@ -48,10 +48,11 @@
         setMsg(loginMsg, "Signing in…");
         try {
             const data = await api.post("/users/login", { email, password });
-            Auth.save(data.token, {
+                        Auth.save(data.token, {
                 userId: data.userId,
                 name: data.name,
-                email: data.email
+                email: data.email,
+                createdAt: data.createdAt
             });
             window.location.href = "/pages/dashboard.html";
         } catch (err) {

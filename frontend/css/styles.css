@@ -936,6 +936,8 @@ input, textarea, select {
     background: #fff;
 }
 
+
+
 .password-wrap {
     position: relative;
     display: flex;
@@ -991,6 +993,7 @@ input, textarea, select {
     gap: var(--space-3);
     padding-top: var(--space-3);
     border-top: 1px solid var(--line);
+    margin-top: auto;
 }
 
 .habit-form__msg {
@@ -1002,6 +1005,90 @@ input, textarea, select {
 
 .habit-form__msg.success {
     color: var(--sage-600);
+}
+
+/* ---------- Settings page ---------- */
+.settings-grid {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 560px);
+    gap: var(--space-5);
+    align-items: start;
+    justify-content: center;
+    max-width: 880px;
+    margin: 0 auto;
+}
+
+.settings-forms {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    max-width: 560px;
+    width: 100%;
+}
+
+.panel__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: var(--space-4);
+}
+
+.panel__head .panel__title {
+    margin-bottom: 0;
+}
+
+.panel__icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--sage-50);
+    border: 1px solid var(--sage-200);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--sage-700);
+    flex-shrink: 0;
+}
+
+.panel__icon svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.habit-form__hint {
+    font-size: 12px;
+    color: var(--ink-500);
+    margin-top: 4px;
+}
+
+.app__content--tinted {
+    background: var(--sage-100);
+}
+
+.settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-5);
+    max-width: 800px;
+    margin: 0 auto;
+    align-items: stretch;
+}
+
+.settings-grid > .panel {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.settings-grid .habit-form {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 @media (max-width: 640px) {
@@ -1746,4 +1833,55 @@ input, textarea, select {
     justify-content: space-between;
     font-size: 12px;
     color: var(--ink-500);
+}
+
+.settings-about {
+    grid-column: 1 / -1;
+}
+
+.settings-about__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.settings-about__name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink-900);
+}
+
+.settings-about__desc {
+    font-size: 14px;
+    color: var(--ink-500);
+    margin: 0;
+}
+
+.settings-about__meta {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-5);
+    margin-top: var(--space-3);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--line);
+}
+
+.settings-about__meta > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.settings-about__meta span {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-500);
+    font-weight: 500;
+}
+
+.settings-about__meta strong {
+    font-size: 14px;
+    color: var(--ink-900);
+    font-weight: 500;
 }

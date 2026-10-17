@@ -75,26 +75,27 @@ async function loginUser(req, res) {
             });
         }
 
-        const token = jwt.sign(
-        {
+                const token = jwt.sign(
+            {
+                userId: user.UserID,
+                email: user.Email
+            },
+            process.env.JWT_SECRET,
+            {
+                expiresIn: "1h"
+            }
+        );
+
+        res.json({
+            message: "Login successful",
+            token,
             userId: user.UserID,
-            email: user.Email
-        },
-        process.env.JWT_SECRET,
-        {
-            expiresIn: "1h"
-        }
-    );
+            name: user.Name,
+            email: user.Email,
+            createdAt: user.CreatedAt
+        });
 
-    res.json({
-         message: "Login successful!",
-        token: token,
-        userId: user.UserID,
-        name: user.Name,
-        email: user.Email
-    });
-
-    } catch (error) {
+    } catch (error) { 
         console.log("Error logging in:", error);
 
         res.status(500).json({
