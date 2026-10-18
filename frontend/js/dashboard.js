@@ -6,8 +6,11 @@
 
     const user = Auth.getUser();
     if (user && user.name) {
-        document.getElementById("user-name").textContent = user.name;
-        document.getElementById("welcome").textContent = "Welcome back, " + user.name;
+        const userNameEl = document.getElementById("user-name");
+        if (userNameEl) userNameEl.textContent = user.name;
+        
+        const welcomeEl = document.getElementById("welcome");
+        if (welcomeEl) welcomeEl.textContent = "Welcome back, " + user.name;
     }
 
     document.getElementById("logout-btn").addEventListener("click", () => {

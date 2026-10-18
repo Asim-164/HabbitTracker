@@ -4,11 +4,12 @@ const router = express.Router();
 
 const authenticateToken = require("../middleware/authMiddleware");
 
-const { getSummary, getCalendar, getReport, getRecentActivity } = require("../controllers/statsController");
+const { getSummary, getCalendar, getReport, getRecentActivity, searchAll } = require("../controllers/statsController");
 
 router.get("/summary", authenticateToken, getSummary);
 router.get("/calendar", authenticateToken, getCalendar);
 router.get("/report", authenticateToken, getReport);
 router.get("/recent-activity", authenticateToken, getRecentActivity);
+router.get("/search", authenticateToken, searchAll);
 
 module.exports = router;

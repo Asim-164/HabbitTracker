@@ -98,3 +98,81 @@ function confirmDialog({ title, message, confirmLabel }) {
         cancelEls.forEach((el) => el.addEventListener("click", onCancel));
     });
 }
+
+// ---------- Global Header Search ----------
+document.addEventListener("DOMContentLoaded", () => {
+    const searchInput = document.getElementById("search-input");
+    const resultsBox = document.getElementById("search-results");
+    if (!searchInput || !resultsBox) return;
+
+    let debounceTimer = null;
+
+    searchInput.addEventListener("input", () => {
+        clearTimeout(debounceTimer);
+        const q = searchInput.value.trim();
+
+        if (q.length < 2) {
+            resultsBox.setAttribute("hidden", "");
+            resultsBox.innerHTML = "";
+            return;
+        }
+
+        debounceTimer = setTimeout(async () => {
+            try {
+                const data = await api.get("/stats/search?q=" + encodeURIComponent(q));
+                renderResults(data, q);
+            } catch (err) {
+                resultsBox.innerHTML = `<div class="search-group-title">Error</div><div class="search-result">${err.message}</div>`;
+                resultsBox.removeAttribute("hidden");
+            }
+        }, 300);
+    });
+
+    function renderResults(data, q) {
+        const habits = data.habits || [];
+        const reflections = data.reflections || [];
+
+        if (habits.length === 0 && reflections.length === 0) {
+            resultsBox.innerHTML = `<div class="search-result" style="color: var(--ink-500);">No results for "${q}"</div>`;
+            resultsBox.removeAttribute("hidden");
+            return;
+        }
+
+        let html = "";
+
+        if (habits.length > 0) {
+            html += `<div class="search-group-title">Habits</div>`;
+            html += habits.map((h) => `
+                <a href="/pages/habits.html" class="search-result">
+                    <span class="search-result__icon">☑</span>
+                    ${h.Name}
+                    <span style="margin-left:auto; font-size:11px; color:var(--ink-500);">${h.Status}</span>
+                </a>
+            `).join("");
+        }
+
+        if (reflections.length > 0) {
+            html += `<div class="search-group-title">Reflections</div>`;
+            html += reflections.map((r) => {
+                const d = new Date(r.Date).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+                const preview = r.Notes ? r.Notes.slice(0, 50) + (r.Notes.length > 50 ? "…" : "") : r.Mood;
+                return `
+                    <a href="/pages/reflections.html" class="search-result">
+                        <span class="search-result__icon">📝</span>
+                        <span><strong>${d}</strong> — ${preview}</span>
+                    </a>
+                `;
+            }).join("");
+        }
+
+        resultsBox.innerHTML = html;
+        resultsBox.removeAttribute("hidden");
+    }
+
+    // Close results when clicking outside
+    document.addEventListener("click", (e) => {
+        if (!e.target.closest("#app-search")) {
+            resultsBox.setAttribute("hidden", "");
+        }
+    });
+});
