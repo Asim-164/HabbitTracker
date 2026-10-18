@@ -184,6 +184,21 @@
                 return true;
             });
 
+                        // If the user has ZERO habits in their entire account, show the big empty state
+            if (allHabits.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state__icon">
+                            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                        </div>
+                        <h3 class="empty-state__title">No habits yet</h3>
+                        <p class="empty-state__desc">Start tracking your progress and building better routines.</p>
+                        <a href="/pages/habit-form.html" class="btn-primary" style="margin-top: var(--space-4);">Create your first habit</a>
+                    </div>
+                `;
+                return; // Stop here so it doesn't render anything else
+            }
+
             filtered.sort((a, b) => {
                 const la = lastLogDate(a.HabitID) || "";
                 const lb = lastLogDate(b.HabitID) || "";
@@ -192,7 +207,7 @@
             });
 
             if (!filtered.length) {
-                list.innerHTML = `<p class="muted small">No habits to show.</p>`;
+                list.innerHTML = `<p class="muted small">No ${filter === 'all' ? '' : filter} habits to show.</p>`;
                 return;
             }
 
