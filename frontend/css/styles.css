@@ -104,51 +104,60 @@ input, textarea, select {
     place-items: center;
     background: var(--sage-50);
     padding: var(--space-5);
+    background-image: radial-gradient(circle at top right, var(--sage-100), transparent 400px),
+                      radial-gradient(circle at bottom left, var(--sage-100), transparent 400px);
 }
 
 .landing__wrap {
-    max-width: 560px;
+    max-width: 600px;
     text-align: center;
 }
 
 .landing__brand {
     font-weight: 700;
-    font-size: 15px;
+    font-size: 16px;
     letter-spacing: 0.02em;
     color: var(--sage-700);
-    margin-bottom: var(--space-7);
+    margin-bottom: var(--space-6);
 }
 
 .landing__headline {
-    font-size: 40px;
+    font-size: 44px;
     line-height: 1.15;
     letter-spacing: -0.02em;
     margin-bottom: var(--space-4);
+    color: var(--ink-900);
 }
 
 .landing__sub {
     color: var(--ink-500);
     margin-bottom: var(--space-6);
-    font-size: 16px;
+    font-size: 18px;
+    line-height: 1.5;
 }
 
 .landing__cta {
     display: inline-block;
     background: var(--sage-500);
     color: #fff;
-    padding: 12px 24px;
+    padding: 14px 32px;
     border-radius: var(--radius);
     font-weight: 500;
-    font-size: 15px;
+    font-size: 16px;
+    transition: background 0.15s ease, transform 0.15s ease;
+    box-shadow: var(--shadow-sm);
 }
 
 .landing__cta:hover {
     background: var(--sage-600);
     color: #fff;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
 }
 
 @media (max-width: 640px) {
-    .landing__headline { font-size: 28px; }
+    .landing__headline { font-size: 32px; }
+    .landing__sub { font-size: 16px; }
 }
 
 /* ---------- Auth (login/register) ---------- */
@@ -354,10 +363,14 @@ input, textarea, select {
 
 .app__brand {
     font-weight: 700;
-    font-size: 15px;
+    font-size: 16px;
     color: var(--sage-700);
     letter-spacing: 0.02em;
     padding: 0 var(--space-2);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: var(--space-4);
 }
 
 .app__nav {

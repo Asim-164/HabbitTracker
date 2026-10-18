@@ -8,6 +8,17 @@
     const loginMsg = document.getElementById("login-msg");
     const registerMsg = document.getElementById("register-msg");
 
+        // Show/hide password toggles
+    document.querySelectorAll(".password-toggle").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const input = btn.parentElement.querySelector("input");
+            if (!input) return;
+            const isPassword = input.type === "password";
+            input.type = isPassword ? "text" : "password";
+            btn.setAttribute("aria-label", isPassword ? "Hide password" : "Show password");
+        });
+    });
+
     let mode = "login";
     // 1. Define the check function
     function checkAlreadyLoggedIn() {

@@ -11,7 +11,11 @@
 </head>
 <body class="landing">
     <main class="landing__wrap">
-        <div class="landing__brand">HabbitTracker</div>
+        <div class="landing__brand">
+            <img src="/assets/logo.png" alt="HabbitTracker Logo" style="width: 80px; height: 80px; border-radius: 20px; margin-bottom: 24px; box-shadow: var(--shadow-sm);">
+            <br>
+            HabbitTracker
+        </div>
 
         <h1 class="landing__headline">
             Track how you perform,<br>
@@ -24,10 +28,9 @@
 
         <a href="/pages/login.html" class="landing__cta">Get Started</a>
     </main>
-</body>
+
     <script src="/js/api.js"></script>
     <script>
-        // Force a fresh login if they navigate to the root URL
         Auth.clear();
     </script>
 </body>
