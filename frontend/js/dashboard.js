@@ -240,35 +240,15 @@
             el.innerHTML = `<p class="muted small">Could not load performance: ${err.message}</p>`;
         }
     }
-        async function loadRecentActivity(active) {
+    async function loadRecentActivity() {
         const el = document.getElementById("recent-activity");
         if (!el) return;
-        if (!active.length) {
-            el.innerHTML = `<p class="muted small">No activity yet.</p>`;
-            return;
-        }
-
         el.innerHTML = `<p class="muted small">Loading…</p>`;
 
         try {
-            // Pull logs for each active habit
-            const allLogs = [];
-            for (const h of active) {
-                try {
-                    const logs = await api.get(`/habit-logs?habitId=${h.HabitID}`);
-                    logs.forEach((l) => allLogs.push({
-                        habitName: h.Name,
-                        date: (l.Date || "").slice(0, 10),
-                        status: l.Status
-                    }));
-                } catch (_) {}
-            }
+            const recent = await api.get("/stats/recent-activity");
 
-            // Sort newest first, take latest 5
-            allLogs.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-            const recent = allLogs.slice(0, 5);
-
-            if (!recent.length) {
+            if (!recent || recent.length === 0) {
                 el.innerHTML = `<p class="muted small">No logs yet.</p>`;
                 return;
             }
@@ -286,73 +266,13 @@
             })();
 
             el.innerHTML = `<div class="activity">` + recent.map((l) => {
-                const info = iconFor(l.status);
-                const dateLabel = l.date === todayISO ? "Today" : l.date;
+                const info = iconFor(l.Status);
+                const dateStr = (l.Date || "").slice(0, 10);
+                const dateLabel = dateStr === todayISO ? "Today" : dateStr;
                 return `
                     <div class="activity__row">
                         <div class="activity__icon ${info.cls}">${info.icon}</div>
-                        <div class="activity__label">${l.habitName} — ${l.status}</div>
-                        <div class="activity__date">${dateLabel}</div>
-                    </div>
-                `;
-            }).join("") + `</div>`;
-        } catch (err) {
-            el.innerHTML = `<p class="muted small">Could not load activity: ${err.message}</p>`;
-        }
-    }
-
-        async function loadRecentActivity(active) {
-        const el = document.getElementById("recent-activity");
-        if (!el) return;
-        if (!active.length) {
-            el.innerHTML = `<p class="muted small">No activity yet.</p>`;
-            return;
-        }
-
-        el.innerHTML = `<p class="muted small">Loading…</p>`;
-
-        try {
-            // Pull logs for each active habit
-            const allLogs = [];
-            for (const h of active) {
-                try {
-                    const logs = await api.get(`/habit-logs?habitId=${h.HabitID}`);
-                    logs.forEach((l) => allLogs.push({
-                        habitName: h.Name,
-                        date: (l.Date || "").slice(0, 10),
-                        status: l.Status
-                    }));
-                } catch (_) {}
-            }
-
-            // Sort newest first, take latest 5
-            allLogs.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-            const recent = allLogs.slice(0, 5);
-
-            if (!recent.length) {
-                el.innerHTML = `<p class="muted small">No logs yet.</p>`;
-                return;
-            }
-
-            const iconFor = (status) => {
-                if (status === "Completed") return { icon: "✓", cls: "is-completed" };
-                if (status === "Partial")   return { icon: "◐", cls: "is-partial" };
-                if (status === "Missed")    return { icon: "✕", cls: "is-missed" };
-                return { icon: "•", cls: "" };
-            };
-
-            const todayISO = (() => {
-                const d = new Date();
-                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-            })();
-
-            el.innerHTML = `<div class="activity">` + recent.map((l) => {
-                const info = iconFor(l.status);
-                const dateLabel = l.date === todayISO ? "Today" : l.date;
-                return `
-                    <div class="activity__row">
-                        <div class="activity__icon ${info.cls}">${info.icon}</div>
-                        <div class="activity__label">${l.habitName} — ${l.status}</div>
+                        <div class="activity__label">${l.HabitName} — ${l.Status}</div>
                         <div class="activity__date">${dateLabel}</div>
                     </div>
                 `;
@@ -404,7 +324,7 @@
             loadThisWeek();
             loadWeeklyChart();
             loadHabitPerformance(active);
-            loadRecentActivity(active);
+            loadRecentActivity();
 
         } catch (err) {
             container.innerHTML = `<p class="muted small">Could not load habits: ${err.message}</p>`;

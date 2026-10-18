@@ -575,9 +575,37 @@ async function getReport(req, res) {
     }
 }
 
+async function getRecentActivity(req, res) {
+    try {
+        const pool = await connectDatabase();
+        const userId = req.user.userId;
+
+        const result = await pool.request()
+            .input("UserID", userId)
+            .query(`
+                SELECT TOP 5
+                    hl.LogID,
+                    hl.Date,
+                    hl.Status,
+                    hl.ActualValue,
+                    h.Name AS HabitName
+                FROM HabitLogs hl
+                JOIN Habits h ON h.HabitID = hl.HabitID
+                WHERE h.UserID = @UserID
+                ORDER BY hl.Date DESC, hl.LogID DESC
+            `);
+
+        res.json(result.recordset);
+    } catch (error) {
+        console.log("Error getting recent activity:", error);
+        res.status(500).json({ message: "Failed to get recent activity" });
+    }
+}
+
 module.exports = {
     getSummary,
     getCalendar,
     getHabitStats,
-    getReport
+    getReport,
+    getRecentActivity
 };
