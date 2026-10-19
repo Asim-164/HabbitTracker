@@ -343,7 +343,8 @@
             loadRecentActivity();
             loadHealthScore();
             loadPatterns();
-            loadAchievements();            
+            loadAchievements();       
+            loadSuggestions();     
 
         } catch (err) {
             container.innerHTML = `<p class="muted small">Could not load habits: ${err.message}</p>`;
@@ -428,6 +429,42 @@
 
         } catch (err) {
             el.innerHTML = `<p class="muted small">Could not load achievements: ${err.message}</p>`;
+        }
+    }
+
+    async function loadSuggestions() {
+        const panel = document.getElementById("suggestions-panel");
+        const el = document.getElementById("suggestions");
+        if (!panel || !el) return;
+
+        try {
+            const data = await api.get("/stats/suggestions");
+            const suggestions = data.suggestions || [];
+
+            if (suggestions.length === 0) {
+                panel.hidden = true;
+                return;
+            }
+
+            const iconMap = {
+                positive: "🌟",
+                info: "💡",
+                warning: "⚠️"
+            };
+
+            el.innerHTML = `<div class="suggestions-list">` + suggestions.map(s => `
+                <div class="suggestion-item is-${s.type}">
+                    <div class="suggestion-item__icon">${iconMap[s.type] || "💡"}</div>
+                    <div class="suggestion-item__content">
+                        <div class="suggestion-item__title">${s.title || "Suggestion"}</div>
+                        <div class="suggestion-item__message">${s.message}</div>
+                    </div>
+                </div>
+            `).join("") + `</div>`;
+
+            panel.hidden = false;
+        } catch (err) {
+            panel.hidden = true;
         }
     }
 

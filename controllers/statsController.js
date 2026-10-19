@@ -1025,6 +1025,157 @@ async function getAchievements(req, res) {
     }
 }
 
+async function getSuggestions(req, res) {
+    try {
+        const pool = await connectDatabase();
+        const userId = req.user.userId;
+
+        // Reuse the health score logic (lightweight inline version)
+        const habitsResult = await pool.request()
+            .input("UserID", userId)
+            .query(`SELECT HabitID, Name, TargetValue, Unit, Frequency FROM Habits WHERE UserID = @UserID AND Status = 'Active'`);
+
+        const habits = habitsResult.recordset;
+        const suggestions = [];
+
+        const today = new Date();
+        const oneDay = 24 * 60 * 60 * 1000;
+
+        function localDateStr(d) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, "0");
+            const day = String(d.getDate()).padStart(2, "0");
+            return `${y}-${m}-${day}`;
+        }
+
+        const last7 = [];
+        for (let i = 0; i < 7; i++) {
+            last7.push(localDateStr(new Date(today - i * oneDay)));
+        }
+
+        for (const habit of habits) {
+            const logsResult = await pool.request()
+                .input("HabitID", habit.HabitID)
+                .query(`SELECT Date, Status, ActualValue FROM HabitLogs WHERE HabitID = @HabitID AND Date >= DATEADD(day, -14, GETDATE())`);
+
+            const logs = logsResult.recordset;
+            const target = habit.TargetValue ? Number(habit.TargetValue) : 0;
+
+            // Health score (last 7 days)
+            let logged = 0;
+            let accSum = 0;
+            for (const dateStr of last7) {
+                const log = logs.find(l => localDateStr(new Date(l.Date)) === dateStr);
+                if (log) {
+                    logged++;
+                    if (target > 0) {
+                        accSum += Math.min(Number(log.ActualValue || 0) / target, 1);
+                    } else {
+                        accSum += log.Status === "Completed" ? 1 : 0;
+                    }
+                }
+            }
+
+            const consistency = logged / 7;
+            const accuracy = logged > 0 ? accSum / logged : 0;
+            const score = Math.round((consistency * 0.5 + accuracy * 0.3) * 100); // 0-80 range (streak excluded for simplicity)
+
+            // Generate suggestion based on score
+            let message = null;
+            let type = "info";
+
+            if (score >= 70) {
+                message = `"${habit.Name}" is going great! Consider raising your target to push yourself further.`;
+                type = "positive";
+            } else if (score >= 40) {
+                message = `"${habit.Name}" is making solid progress. Keep showing up consistently.`;
+                type = "info";
+            } else if (score > 0) {
+                message = `"${habit.Name}" is struggling. Try lowering the target or switching to "Weekly" frequency to build momentum.`;
+                type = "warning";
+            } else {
+                message = `You haven't logged "${habit.Name}" this week. Try logging it today to get back on track.`;
+                type = "warning";
+            }
+
+            let title = "Insight";
+            if (type === "warning") title = "Action Needed";
+            if (type === "positive") title = "Great Job!";
+            if (type === "info") title = "On Track";
+
+            if (score >= 70) {
+                title = "Ready to Level Up";
+            } else if (score >= 40) {
+                title = "Keep the Momentum";
+            } else if (score > 0) {
+                title = "Lower the Target";
+            } else {
+                title = "Get Back on Track";
+            }
+
+            if (message) {
+                suggestions.push({
+                    habitId: habit.HabitID,
+                    habitName: habit.Name,
+                    score: score,
+                    type: type,
+                    title: title,
+                    message: message
+                });
+            }
+        }
+
+        // Also check for failure patterns to add those suggestions
+        const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        for (const habit of habits) {
+            const logsResult = await pool.request()
+                .input("HabitID", habit.HabitID)
+                .query(`SELECT Date, Status FROM HabitLogs WHERE HabitID = @HabitID AND Date >= DATEADD(day, -30, GETDATE())`);
+
+            const logs = logsResult.recordset;
+            if (logs.length < 3) continue;
+
+            const dayStats = {};
+            dayNames.forEach(d => dayStats[d] = { total: 0, missed: 0 });
+            logs.forEach(log => {
+                const d = dayNames[new Date(log.Date).getDay()];
+                dayStats[d].total++;
+                if (log.Status === "Missed") dayStats[d].missed++;
+            });
+
+            let worstDay = null, worstRate = 0;
+            for (const day of dayNames) {
+                const s = dayStats[day];
+                if (s.total >= 2) {
+                    const rate = s.missed / s.total;
+                    if (rate > worstRate) { worstRate = rate; worstDay = day; }
+                }
+            }
+
+            if (worstDay && worstRate >= 0.5) {
+                suggestions.push({
+                    habitId: habit.HabitID,
+                    habitName: habit.Name,
+                    score: null,
+                    type: "warning",
+                    title: "Watch Out for " + worstDay + "s",
+                    message: `You tend to miss "${habit.Name}" on ${worstDay}s. Try setting a reminder for ${worstDay} evening.`
+                });
+            }
+        }
+
+        // Sort so warnings come first, then info, then positive
+        const order = { warning: 0, info: 1, positive: 2 };
+        suggestions.sort((a, b) => order[a.type] - order[b.type]);
+
+        res.json({ suggestions: suggestions.slice(0, 4) });
+
+    } catch (error) {
+        console.log("Error getting suggestions:", error);
+        res.status(500).json({ message: "Failed to get suggestions" });
+    }
+}
+
 module.exports = {
     getSummary,
     getCalendar,
@@ -1034,5 +1185,6 @@ module.exports = {
     searchAll,
     getHealthScore,
     getFailurePatterns,
-    getAchievements
+    getAchievements,
+    getSuggestions
 };

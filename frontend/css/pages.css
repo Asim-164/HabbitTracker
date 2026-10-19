@@ -381,3 +381,73 @@
     font-size: 12px;
     font-weight: bold;
 }
+
+/* ---------- Smart Suggestions ---------- */
+.suggestions-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.suggestion-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--space-5);
+    border-radius: var(--radius);
+    border-left: 4px solid transparent;
+    font-size: 14px;
+    line-height: 1.5;
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    transition: transform 0.15s ease;
+}
+
+.suggestion-item:hover {
+    transform: translateX(4px);
+}
+
+.suggestion-item.is-positive {
+    border-left-color: var(--sage-500);
+    background: #f8fcf8;
+}
+
+.suggestion-item.is-info {
+    border-left-color: #5a9bd6;
+    background: #f6fafd;
+}
+
+.suggestion-item.is-warning {
+    border-left-color: var(--amber);
+    background: #fffdf8;
+}
+
+.suggestion-item__icon {
+    font-size: 22px;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.suggestion-item__content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.suggestion-item__title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--ink-900);
+}
+
+.suggestion-item.is-positive .suggestion-item__title { color: var(--sage-700); }
+.suggestion-item.is-info .suggestion-item__title { color: #2a4d68; }
+.suggestion-item.is-warning .suggestion-item__title { color: #7a5a19; }
+
+.suggestion-item__message {
+    color: var(--ink-700);
+    font-size: 13px;
+}
