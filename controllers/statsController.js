@@ -1187,6 +1187,94 @@ async function getSuggestions(req, res) {
     }
 }
 
+async function getRelationships(req, res) {
+    try {
+        const pool = await connectDatabase();
+        const userId = req.user.userId;
+
+        const habitsResult = await pool.request()
+            .input("UserID", userId)
+            .query(`SELECT HabitID, Name FROM Habits WHERE UserID = @UserID AND Status = 'Active'`);
+
+        const habits = habitsResult.recordset;
+        if (habits.length < 2) {
+            return res.json({ relationships: [] });
+        }
+
+        // Get logs from the last 30 days
+        const logsResult = await pool.request()
+            .input("UserID", userId)
+            .query(`
+                SELECT hl.HabitID, hl.Date, hl.Status
+                FROM HabitLogs hl
+                JOIN Habits h ON h.HabitID = hl.HabitID
+                WHERE h.UserID = @UserID
+                  AND hl.Date >= DATEADD(day, -30, GETDATE())
+                  AND hl.Status = 'Completed'
+            `);
+
+        const logs = logsResult.recordset;
+
+        function localDateStr(d) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, "0");
+            const day = String(d.getDate()).padStart(2, "0");
+            return `${y}-${m}-${day}`;
+        }
+
+        // Build a Set of completed dates per habit
+        const completedDates = {};
+        habits.forEach(h => completedDates[h.HabitID] = new Set());
+
+        logs.forEach(log => {
+            completedDates[log.HabitID].add(localDateStr(new Date(log.Date)));
+        });
+
+        // Compare every pair
+        const relationships = [];
+
+        for (let i = 0; i < habits.length; i++) {
+            for (let j = i + 1; j < habits.length; j++) {
+                const a = habits[i];
+                const b = habits[j];
+                const datesA = completedDates[a.HabitID];
+                const datesB = completedDates[b.HabitID];
+
+                if (datesA.size < 3 || datesB.size < 3) continue;
+
+                // Count shared days
+                let shared = 0;
+                for (const d of datesA) {
+                    if (datesB.has(d)) shared++;
+                }
+
+                if (shared < 3) continue; // Need at least 3 shared days to call it a relationship
+
+                // Calculate confidence: how often B happens when A happens
+                const confidenceAB = Math.round((shared / datesA.size) * 100);
+                const confidenceBA = Math.round((shared / datesB.size) * 100);
+
+                relationships.push({
+                    habitA: a.Name,
+                    habitB: b.Name,
+                    sharedDays: shared,
+                    confidenceAB: confidenceAB,
+                    confidenceBA: confidenceBA
+                });
+            }
+        }
+
+        // Sort by shared days, best first
+        relationships.sort((a, b) => b.sharedDays - a.sharedDays);
+
+        res.json({ relationships: relationships.slice(0, 3) });
+
+    } catch (error) {
+        console.log("Error getting relationships:", error);
+        res.status(500).json({ message: "Failed to get relationships" });
+    }
+}
+
 module.exports = {
     getSummary,
     getCalendar,
@@ -1197,5 +1285,6 @@ module.exports = {
     getHealthScore,
     getFailurePatterns,
     getAchievements,
-    getSuggestions
+    getSuggestions,
+    getRelationships
 };

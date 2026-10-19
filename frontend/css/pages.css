@@ -469,3 +469,117 @@
     background: rgba(0,0,0,0.05);
     color: var(--ink-700);
 }
+
+/* ---------- Habit Relationships ---------- */
+.relationships-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.relationship-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.relationship-card:hover {
+    border-color: var(--sage-300);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Percentage sides */
+.relationship-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 100px;
+}
+
+.relationship-stat__value {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+}
+
+.relationship-stat.is-high .relationship-stat__value {
+    color: var(--sage-600);
+}
+
+.relationship-stat.is-medium .relationship-stat__value {
+    color: var(--amber);
+}
+
+.relationship-stat.is-low .relationship-stat__value {
+    color: var(--red);
+}
+
+.relationship-stat__label {
+    font-size: 11px;
+    color: var(--ink-500);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 4px;
+}
+
+/* Middle visual bridge */
+.relationship-visual {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex: 1;
+    justify-content: center;
+    background: var(--sage-50);
+    border-radius: var(--radius);
+    padding: var(--space-3) var(--space-4);
+    margin: 0 var(--space-4);
+}
+
+.relationship-node {
+    color: var(--ink-900);
+    font-weight: 600;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.relationship-connector {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    max-width: 80px;
+}
+
+.relationship-line {
+    height: 2px;
+    background: var(--sage-300);
+    flex: 1;
+    border-radius: 2px;
+}
+
+.relationship-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--sage-500);
+    border-radius: 50%;
+    box-shadow: 0 0 0 3px var(--sage-100);
+}
+
+@media (max-width: 700px) {
+    .relationship-card {
+        flex-direction: column;
+        gap: var(--space-4);
+    }
+    .relationship-visual {
+        width: 100%;
+        margin: var(--space-2) 0;
+    }
+}

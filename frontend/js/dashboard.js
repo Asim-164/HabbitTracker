@@ -293,7 +293,7 @@
 
     async function loadTodayHabits() {
         const container = document.getElementById("today-habits");
-        container.innerHTML = `<p class="muted small">Loading…</p>`;
+        container.innerHTML = ` <p class="muted small">Loading…</p>`;
 
         try {
             const habits = await api.get("/habits");
@@ -345,6 +345,7 @@
             loadPatterns();
             loadAchievements();       
             loadSuggestions();     
+            loadRelationships();
 
         } catch (err) {
             container.innerHTML = `<p class="muted small">Could not load habits: ${err.message}</p>`;
@@ -491,6 +492,54 @@
                 });
             });
 
+            panel.hidden = false;
+        } catch (err) {
+            panel.hidden = true;
+        }
+    }
+
+        async function loadRelationships() {
+        const panel = document.getElementById("relationships-panel");
+        const el = document.getElementById("relationships");
+        if (!panel || !el) return;
+
+        try {
+            const data = await api.get("/stats/relationships");
+            const relationships = data.relationships || [];
+
+            if (relationships.length === 0) {
+                panel.hidden = true;
+                return;
+            }
+
+            function getConfClass(pct) {
+                if (pct >= 75) return "is-high";
+                if (pct >= 40) return "is-medium";
+                return "is-low";
+            }
+
+            el.innerHTML = relationships.map(r => `
+                <div class="relationship-card">
+                    <div class="relationship-stat ${getConfClass(r.confidenceAB)}">
+                        <div class="relationship-stat__value">${r.confidenceAB}%</div>
+                        <div class="relationship-stat__label">do ${r.habitB}</div>
+                    </div>
+                    <div class="relationship-visual">
+                        <div class="relationship-node">${r.habitA}</div>
+                        <div class="relationship-connector">
+                            <div class="relationship-line"></div>
+                            <div class="relationship-dot"></div>
+                            <div class="relationship-line"></div>
+                        </div>
+                        <div class="relationship-node">${r.habitB}</div>
+                    </div>
+                    <div class="relationship-stat ${getConfClass(r.confidenceBA)}">
+                        <div class="relationship-stat__value">${r.confidenceBA}%</div>
+                        <div class="relationship-stat__label">do ${r.habitA}</div>
+                    </div>
+                </div>
+            `).join("");
+            
             panel.hidden = false;
         } catch (err) {
             panel.hidden = true;
