@@ -95,16 +95,34 @@
 
     }
 
-        async function loadThisWeek() {
+    async function loadThisWeek() {
         const el = document.getElementById("stat-week");
         try {
             const report = await api.get("/stats/report?groupBy=week&periods=1");
             const row = report.rows && report.rows[0];
-            if (!row || row.totalLogs === 0) {
+            if (!row) {
                 el.textContent = "0/7 days";
                 return;
             }
-            el.textContent = `${row.totalLogs}/7 days`;
+
+            // Get the distinct number of logged days this week by fetching all logs
+            const habits = await api.get("/habits");
+            const active = habits.filter((h) => h.Status === "Active");
+
+            const loggedDates = new Set();
+            for (const h of active) {
+                try {
+                    const logs = await api.get(`/habit-logs?habitId=${h.HabitID}`);
+                    logs.forEach(l => {
+                        const d = String(l.Date || "").slice(0, 10);
+                        if (d >= row.periodStart && d <= row.periodEnd) {
+                            loggedDates.add(d);
+                        }
+                    });
+                } catch (_) {}
+            }
+
+            el.textContent = `${loggedDates.size}/7 days`;
         } catch (_) {
             el.textContent = "—";
         }
@@ -154,23 +172,15 @@
                 } catch (_) {}
             }
 
-            // For each day: average of (min(actual, target) / target) across logged habits that day
+            // For each day: completed habits / total active habits
+            const totalActive = active.length;
             const bars = days.map((d) => {
                 const dayLogs = allLogs.filter((l) => l.date === d.date);
                 if (dayLogs.length === 0) {
                     return { label: d.label, rate: 0, empty: true };
                 }
-                let sum = 0;
-                for (const log of dayLogs) {
-                    const target = log.target;
-                    if (!target || target <= 0) {
-                        // Non-measurable habit: Completed = 1, else 0
-                        sum += log.status === "Completed" ? 1 : 0;
-                    } else {
-                        sum += Math.min((log.actual || 0) / target, 1);
-                    }
-                }
-                const rate = sum / dayLogs.length;
+                const completed = dayLogs.filter(l => l.status === "Completed").length;
+                const rate = totalActive > 0 ? completed / totalActive : 0;
                 return { label: d.label, rate, empty: false };
             });
 
@@ -196,9 +206,28 @@
         el.innerHTML = `<p class="muted small">Loading…</p>`;
 
         try {
+            // Compute this week's Monday and Sunday (local time)
+            const now = new Date();
+            const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, ...
+            const daysSinceMonday = (dayOfWeek + 6) % 7;
+            const monday = new Date(now);
+            monday.setDate(now.getDate() - daysSinceMonday);
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+
+            function fmtDate(d) {
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, "0");
+                const day = String(d.getDate()).padStart(2, "0");
+                return `${y}-${m}-${day}`;
+            }
+
+            const fromStr = fmtDate(monday);
+            const toStr = fmtDate(sunday);
+
             const rows = await Promise.all(active.map(async (habit) => {
                 try {
-                    const stats = await api.get(`/habits/${habit.HabitID}/stats`);
+                    const stats = await api.get(`/habits/${habit.HabitID}/stats?from=${fromStr}&to=${toStr}`);
                     return { habit, stats };
                 } catch (_) {
                     return { habit, stats: null };
@@ -214,15 +243,13 @@
                 const isMeasurable = habit.TargetValue !== null && Number(habit.TargetValue) > 0;
                 const pct = r && r.completionRate !== null ? Math.round(r.completionRate * 100) : 0;
                 const actualText = isMeasurable
-                    ? `${r ? r.totalActual : 0} / ${r ? r.totalTarget : 0} ${habit.Unit || ""}`.trim()
+                    ? `Total this week: ${r ? r.totalActual : 0} ${habit.Unit || ""} out of ${r ? r.totalTarget : 0} ${habit.Unit || ""}`.trim()
                     : "—";
 
                 const target = habit.TargetValue !== null ? Number(habit.TargetValue) : 0;
                 const targetPct = (() => {
-                    if (!r || target <= 0 || r.logsInRange === 0) return null;
-                    // Average of (min(actual, target) / target) across logged days
-                    // We approximate using totalActual / (target × logsInRange), capped at 1
-                    const ratio = Math.min(r.totalActual / (target * r.logsInRange), 1);
+                    if (!r || !r.totalTarget || r.totalTarget <= 0) return null;
+                    const ratio = Math.min(r.totalActual / r.totalTarget, 1);
                     return Math.round(ratio * 100);
                 })();
 
@@ -546,5 +573,8 @@
         }
     }
 
-    loadTodayHabits();
+    // Re-fetch fresh data every time the page is shown (including back button)
+    window.addEventListener("pageshow", () => {
+        loadTodayHabits();
+    });
 })();

@@ -29,6 +29,8 @@ const Auth = {
 async function apiRequest(path, options = {}) {
     const headers = {
         "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
         ...(options.headers || {})
     };
 
