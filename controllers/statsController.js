@@ -1076,9 +1076,18 @@ async function getSuggestions(req, res) {
                 }
             }
 
-            const consistency = logged / 7;
+            // Frequency-aware consistency
+            let consistency;
+            if (habit.Frequency === "Weekly") {
+                // For weekly habits, logging at least once in 7 days = 100% consistency
+                consistency = Math.min(logged / 1, 1);
+            } else {
+                // For daily habits, logging every day = 100% consistency
+                consistency = logged / 7;
+            }
+
             const accuracy = logged > 0 ? accSum / logged : 0;
-            const score = Math.round((consistency * 0.5 + accuracy * 0.3) * 100); // 0-80 range (streak excluded for simplicity)
+            const score = Math.round((consistency * 0.5 + accuracy * 0.3) * 100);
 
             // Generate suggestion based on score
             let message = null;
@@ -1128,6 +1137,8 @@ async function getSuggestions(req, res) {
         // Also check for failure patterns to add those suggestions
         const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
         for (const habit of habits) {
+            if (habit.Frequency === "Weekly") continue; // Weekly habits don't have daily failure patterns
+
             const logsResult = await pool.request()
                 .input("HabitID", habit.HabitID)
                 .query(`SELECT Date, Status FROM HabitLogs WHERE HabitID = @HabitID AND Date >= DATEADD(day, -30, GETDATE())`);

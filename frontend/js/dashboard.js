@@ -439,7 +439,14 @@
 
         try {
             const data = await api.get("/stats/suggestions");
-            const suggestions = data.suggestions || [];
+            let suggestions = data.suggestions || [];
+
+            // Filter out dismissed suggestions (stored in sessionStorage by habitId + type)
+            const dismissed = JSON.parse(sessionStorage.getItem("dismissedSuggestions") || "[]");
+            suggestions = suggestions.filter(s => {
+                const key = (s.habitId || "") + "_" + s.type;
+                return !dismissed.includes(key);
+            });
 
             if (suggestions.length === 0) {
                 panel.hidden = true;
@@ -452,15 +459,37 @@
                 warning: "⚠️"
             };
 
-            el.innerHTML = `<div class="suggestions-list">` + suggestions.map(s => `
-                <div class="suggestion-item is-${s.type}">
+            el.innerHTML = `<div class="suggestions-list">` + suggestions.map((s, i) => `
+                <div class="suggestion-item is-${s.type}" data-suggestion-key="${(s.habitId || "")}_${s.type}">
                     <div class="suggestion-item__icon">${iconMap[s.type] || "💡"}</div>
                     <div class="suggestion-item__content">
                         <div class="suggestion-item__title">${s.title || "Suggestion"}</div>
                         <div class="suggestion-item__message">${s.message}</div>
                     </div>
+                    <button type="button" class="suggestion-dismiss" aria-label="Dismiss suggestion">×</button>
                 </div>
             `).join("") + `</div>`;
+
+            // Wire up dismiss buttons
+            el.querySelectorAll(".suggestion-dismiss").forEach((btn) => {
+                btn.addEventListener("click", (e) => {
+                    const item = e.target.closest(".suggestion-item");
+                    const key = item.dataset.suggestionKey;
+
+                    // Add to dismissed list
+                    const dismissedNow = JSON.parse(sessionStorage.getItem("dismissedSuggestions") || "[]");
+                    if (!dismissedNow.includes(key)) dismissedNow.push(key);
+                    sessionStorage.setItem("dismissedSuggestions", JSON.stringify(dismissedNow));
+
+                    // Hide the card
+                    item.remove();
+
+                    // If no cards left, hide the panel
+                    if (el.querySelectorAll(".suggestion-item").length === 0) {
+                        panel.hidden = true;
+                    }
+                });
+            });
 
             panel.hidden = false;
         } catch (err) {
