@@ -342,6 +342,7 @@
             loadHabitPerformance(active);
             loadRecentActivity();
             loadHealthScore();
+            loadPatterns();
 
         } catch (err) {
             container.innerHTML = `<p class="muted small">Could not load habits: ${err.message}</p>`;
@@ -378,6 +379,29 @@
             trendEl.textContent = "—";
         }
     }   
+
+    async function loadPatterns() {
+        const panel = document.getElementById("patterns-panel");
+        const el = document.getElementById("patterns");
+        if (!panel || !el) return;
+
+        try {
+            const data = await api.get("/stats/patterns");
+            const patterns = data.patterns || [];
+
+            if (patterns.length === 0) {
+                panel.hidden = true;
+                return;
+            }
+
+            // Show the first pattern (we limit to top 3 in backend, but display the most severe one)
+            el.innerHTML = patterns[0].message;
+            panel.hidden = false; // Show the panel
+
+        } catch (err) {
+            panel.hidden = true;
+        }
+    }
 
     loadTodayHabits();
 })();

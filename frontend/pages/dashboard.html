@@ -104,6 +104,20 @@
                 </div>
             </section>
 
+            <!-- Patterns & Insights -->
+            <section class="panel" id="patterns-panel" hidden style="border-color: #ecd39b; background: #fffbf0;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;">
+                    <div style="display: flex; gap: 12px;">
+                        <span style="font-size: 24px;">💡</span>
+                        <div>
+                            <h3 class="panel__title" style="margin-bottom: 4px; color: #7a5a19;">Insight Discovered</h3>
+                            <div id="patterns" style="font-size: 14px; color: #7a5a19; line-height: 1.5;"></div>
+                        </div>
+                    </div>
+                    <button type="button" onclick="document.getElementById('patterns-panel').hidden = true" style="background: transparent; color: #7a5a19; font-size: 13px; font-weight: 500; padding: 4px 8px; border-radius: 4px;" onmouseover="this.style.background='rgba(0,0,0,0.05)'" onmouseout="this.style.background='transparent'">Dismiss</button>
+                </div>
+            </section>
+
             <!-- Today's Habits (hero) -->
             <section class="panel">
                 <h3 class="panel__title">Today's Habits</h3>
@@ -121,7 +135,7 @@
                     <h3 class="panel__title">Recent Activity</h3>
                     <div id="recent-activity"></div>
                 </section>
-            </div>
+            </div>      
 
             <!-- Habit Performance -->
             <section class="panel">
