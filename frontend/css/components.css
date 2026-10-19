@@ -47,8 +47,8 @@
 /* ---------- Cards ---------- */
 .cards {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: var(--space-5);
+    grid-template-columns: repeat(5, 1fr);
+    gap: var(--space-4);
 }
 
 .card {
@@ -516,4 +516,60 @@
 }
 @media (max-width: 640px) {
     .habit-form__row { grid-template-columns: 1fr; }
+}
+
+/* ---------- Health Trend Badges ---------- */
+.health-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px 4px 6px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: var(--space-2);
+    width: fit-content;
+}
+
+.health-trend__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+/* Improving */
+.health-trend.is-improving {
+    background: var(--sage-100);
+    color: var(--sage-700);
+}
+.health-trend.is-improving .health-trend__icon {
+    background: var(--sage-500);
+    color: #fff;
+}
+
+/* Declining */
+.health-trend.is-declining {
+    background: #fbe3e1;
+    color: #7a3129;
+}
+.health-trend.is-declining .health-trend__icon {
+    background: var(--red);
+    color: #fff;
+}
+
+/* Steady */
+.health-trend.is-steady {
+    background: var(--sage-50);
+    color: var(--ink-500);
+    border: 1px solid var(--line);
+    padding: 3px 9px 3px 5px; /* slight adjustment for the border */
+}
+.health-trend.is-steady .health-trend__icon {
+    background: var(--ink-300);
+    color: #fff;
 }

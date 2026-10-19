@@ -650,11 +650,148 @@ async function searchAll(req, res) {
     }
 }
 
+async function getHealthScore(req, res) {
+    try {
+        const pool = await connectDatabase();
+        const userId = req.user.userId;
+
+        const habitsResult = await pool.request()
+            .input("UserID", userId)
+            .query(`SELECT HabitID, Name, TargetValue, Unit FROM Habits WHERE UserID = @UserID AND Status = 'Active'`);
+
+        const habits = habitsResult.recordset;
+        if (habits.length === 0) {
+            return res.json({ overallScore: 0, overallTrend: "Steady", habits: [] });
+        }
+
+        const today = new Date();
+        const oneDay = 24 * 60 * 60 * 1000;
+        
+        // Helper to format a date as YYYY-MM-DD in local time
+        function localDateStr(d) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, "0");
+            const day = String(d.getDate()).padStart(2, "0");
+            return `${y}-${m}-${day}`;
+        }
+        
+        // Calculate dates for last 14 days (this week + previous week)
+        const dates = [];
+        for (let i = 0; i < 14; i++) {
+            const d = new Date(today - i * oneDay);
+            dates.push(localDateStr(d));
+        }
+
+        const thisWeekDates = dates.slice(0, 7);
+        const lastWeekDates = dates.slice(7, 14);
+
+        const habitScores = await Promise.all(habits.map(async (habit) => {
+            const logsResult = await pool.request()
+                .input("HabitID", habit.HabitID)
+                .query(`
+                    SELECT Date, Status, ActualValue 
+                    FROM HabitLogs 
+                    WHERE HabitID = @HabitID 
+                    AND Date >= DATEADD(day, -14, GETDATE())
+                `);
+
+            const logs = logsResult.recordset;
+            const target = habit.TargetValue ? Number(habit.TargetValue) : 0;
+
+            // Calculate score for a specific date range
+            const calcScore = (dateArray) => {
+                let logsCount = 0;
+                let accuracySum = 0;
+
+                dateArray.forEach(dateStr => {
+                    const log = logs.find(l => localDateStr(new Date(l.Date)) === dateStr);
+                    if (log) {
+                        logsCount++;
+                        if (target > 0) {
+                            accuracySum += Math.min(Number(log.ActualValue || 0) / target, 1);
+                        } else {
+                            accuracySum += log.Status === "Completed" ? 1 : 0;
+                        }
+                    }
+                });
+
+                const consistency = logsCount / 7;
+                const accuracy = logsCount > 0 ? (accuracySum / logsCount) : 0;
+                
+                // Calculate current streak: consecutive non-missed days ending today or yesterday
+                let currentStreak = 0;
+                let checkDate = new Date(today);
+                const todayStr = localDateStr(checkDate);
+                const yesterdayStr = localDateStr(new Date(today - oneDay));
+
+                // Allow the streak to start from today or yesterday
+                const hasTodayLog = logs.some(l => localDateStr(new Date(l.Date)) === todayStr && l.Status !== "Missed");
+                const hasYesterdayLog = logs.some(l => localDateStr(new Date(l.Date)) === yesterdayStr && l.Status !== "Missed");
+                
+                if (hasTodayLog) {
+                    checkDate = new Date(today);
+                } else if (hasYesterdayLog) {
+                    checkDate = new Date(today - oneDay);
+                } else {
+                    checkDate = null;
+                }
+
+                if (checkDate) {
+                    while (true) {
+                        const dateStr = localDateStr(checkDate);
+                        const log = logs.find(l => localDateStr(new Date(l.Date)) === dateStr);
+                        if (!log || log.Status === "Missed") break;
+                        currentStreak++;
+                        checkDate = new Date(checkDate - oneDay);
+                    }
+                }
+
+                const streakScore = Math.min(currentStreak / 7, 1);
+                const healthScore = (consistency * 0.5) + (accuracy * 0.3) + (streakScore * 0.2);
+                return Math.round(healthScore * 100);
+            };
+
+            const thisWeekScore = calcScore(thisWeekDates);
+            const lastWeekScore = calcScore(lastWeekDates);
+
+            let trend = "Steady";
+            if (thisWeekScore - lastWeekScore > 5) trend = "Improving";
+            else if (thisWeekScore - lastWeekScore < -5) trend = "Declining";
+
+            return {
+                habitId: habit.HabitID,
+                name: habit.Name,
+                score: thisWeekScore,
+                trend: trend
+            };
+        }));
+
+        const overallScore = Math.round(habitScores.reduce((sum, h) => sum + h.score, 0) / habitScores.length);
+        
+        // Determine overall trend based on majority of habits
+        const trends = habitScores.map(h => h.trend);
+        let overallTrend = "Steady";
+        if (trends.filter(t => t === "Improving").length > trends.filter(t => t === "Declining").length) overallTrend = "Improving";
+        else if (trends.filter(t => t === "Declining").length > trends.filter(t => t === "Improving").length) overallTrend = "Declining";
+
+        res.json({
+            overallScore,
+            overallTrend,
+            habits: habitScores
+        });
+
+    } catch (error) {
+        console.log("Error getting health score:", error);
+        res.status(500).json({ message: "Failed to get health score" });
+    }
+}
+
 module.exports = {
     getSummary,
     getCalendar,
     getHabitStats,
     getReport,
     getRecentActivity,
-    searchAll
+    searchAll,
+    getHealthScore
 };

@@ -41,7 +41,7 @@
         return { cls: "is-empty", icon: "◯", label: "Not logged today", fill: 0 };
     }
 
-    function renderHabitCard(habit, log, streak) {
+    function renderHabitCard(habit, log, streak, health) {
         const isMeasurable = habit.TargetValue !== null && Number(habit.TargetValue) > 0;
         const target = isMeasurable ? Number(habit.TargetValue) : 0;
         const actual = log ? Number(log.ActualValue || 0) : 0;
@@ -62,7 +62,13 @@
         el.innerHTML = `
             <div class="habit-card__top">
                 <div class="habit-card__name">${habit.Name}</div>
-                <div class="habit-card__streak">🔥 ${streakDays} ${streakDays === 1 ? "day" : "days"}</div>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    ${health ? `<span class="health-trend ${health.trend === "Improving" ? "is-improving" : health.trend === "Declining" ? "is-declining" : "is-steady"}">
+                        <span class="health-trend__icon">${health.trend === "Improving" ? "↗" : health.trend === "Declining" ? "↘" : "→"}</span>
+                        ${health.score}
+                    </span>` : ""}
+                    <div class="habit-card__streak">🔥 ${streakDays} ${streakDays === 1 ? "day" : "days"}</div>
+                </div>
             </div>
             <div class="habit-card__meta">${meta}</div>
             <div class="habit-card__bar">
@@ -293,6 +299,13 @@
             const habits = await api.get("/habits");
             const active = habits.filter((h) => h.Status === "Active");
 
+            // Fetch health scores alongside habits
+            let healthData = {};
+            try {
+                const healthRes = await api.get("/stats/health-score");
+                healthRes.habits.forEach(h => healthData[h.habitId] = h);
+            } catch (_) {}
+
             if (active.length === 0) {
                 container.innerHTML = `<p class="muted small">No active habits yet.</p>`;
                 fillSummary([], [], 0);
@@ -317,7 +330,7 @@
                     }
                 } catch (_) {}
                 todayLogs.push(log);
-                return renderHabitCard(habit, log, streak);
+                return renderHabitCard(habit, log, streak, healthData[habit.HabitID]);
             }));
 
             container.innerHTML = "";
@@ -328,11 +341,43 @@
             loadWeeklyChart();
             loadHabitPerformance(active);
             loadRecentActivity();
+            loadHealthScore();
 
         } catch (err) {
             container.innerHTML = `<p class="muted small">Could not load habits: ${err.message}</p>`;
         }
     }
+
+    async function loadHealthScore() {
+        const scoreEl = document.getElementById("stat-health");
+        const trendEl = document.getElementById("stat-health-trend");
+        if (!scoreEl || !trendEl) return;
+
+        try {
+            const data = await api.get("/stats/health-score");
+
+            scoreEl.textContent = data.overallScore + " / 100";
+
+            const trendMap = {
+                "Improving": { label: "Improving", cls: "is-improving", icon: "↗" },
+                "Declining": { label: "Declining", cls: "is-declining", icon: "↘" },
+                "Steady":    { label: "Steady",    cls: "is-steady",    icon: "→" }
+            };
+
+            const trend = trendMap[data.overallTrend] || trendMap["Steady"];
+
+            trendEl.innerHTML = `
+                <span class="health-trend ${trend.cls}">
+                    <span class="health-trend__icon">${trend.icon}</span>
+                    ${trend.label}
+                </span>
+            `;
+
+        } catch (err) {
+            scoreEl.textContent = "—";
+            trendEl.textContent = "—";
+        }
+    }   
 
     loadTodayHabits();
 })();
