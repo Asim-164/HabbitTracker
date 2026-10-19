@@ -343,6 +343,7 @@
             loadRecentActivity();
             loadHealthScore();
             loadPatterns();
+            loadAchievements();            
 
         } catch (err) {
             container.innerHTML = `<p class="muted small">Could not load habits: ${err.message}</p>`;
@@ -400,6 +401,33 @@
 
         } catch (err) {
             panel.hidden = true;
+        }
+    }
+
+        async function loadAchievements() {
+        const el = document.getElementById("achievements");
+        if (!el) return;
+        el.innerHTML = `<p class="muted small">Loading achievements…</p>`;
+
+        try {
+            const data = await api.get("/stats/achievements");
+            const list = data.achievements || [];
+
+            if (list.length === 0) {
+                el.innerHTML = `<p class="muted small">No achievements yet.</p>`;
+                return;
+            }
+
+            el.innerHTML = list.map(a => `
+                <div class="achievement-card ${a.unlocked ? 'is-unlocked' : 'is-locked'}">
+                    <div class="achievement-icon">${a.icon}</div>
+                    <div class="achievement-title">${a.title}</div>
+                    <div class="achievement-desc">${a.description}</div>
+                </div>
+            `).join("");
+
+        } catch (err) {
+            el.innerHTML = `<p class="muted small">Could not load achievements: ${err.message}</p>`;
         }
     }
 

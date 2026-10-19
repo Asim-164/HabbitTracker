@@ -871,6 +871,160 @@ async function getFailurePatterns(req, res) {
     }
 }
 
+async function getAchievements(req, res) {
+    try {
+        const pool = await connectDatabase();
+        const userId = req.user.userId;
+
+        // 1. Total logs and total completed logs
+        const statsResult = await pool.request()
+            .input("UserID", userId)
+            .query(`
+                SELECT 
+                    COUNT(hl.LogID) AS TotalLogs,
+                    SUM(CASE WHEN hl.Status = 'Completed' THEN 1 ELSE 0 END) AS TotalCompleted
+                FROM HabitLogs hl
+                JOIN Habits h ON h.HabitID = hl.HabitID
+                WHERE h.UserID = @UserID
+            `);
+        
+        const totalLogs = statsResult.recordset[0].TotalLogs || 0;
+        const totalCompleted = statsResult.recordset[0].TotalCompleted || 0;
+
+         // NEW: Count total reflections
+        const refResult = await pool.request()
+            .input("UserID", userId)
+            .query(`SELECT COUNT(ReflectionID) AS TotalReflections FROM Reflections WHERE UserID = @UserID`);
+        const totalReflections = refResult.recordset[0].TotalReflections || 0;
+
+        // 2. Max Streak (using a simpler logic: longest sequence of non-missed logs)
+        // For performance, we just check if they have a 7-day streak using the existing streak endpoint logic
+        // Or we can do a quick query for consecutive days.
+        // Let's do a simple check: Do they have any habit with a currentStreak >= 7?
+        // We can call the internal streak logic, but it's easier to just query the logs.
+        const habitsResult = await pool.request()
+            .input("UserID", userId)
+            .query(`SELECT HabitID, Name FROM Habits WHERE UserID = @UserID AND Status = 'Active'`);
+        
+        const habits = habitsResult.recordset;
+        let maxStreak = 0;
+        
+        // (Simplified streak check for achievements)
+        for (const h of habits) {
+            const logs = await pool.request()
+                .input("HabitID", h.HabitID)
+                .query(`SELECT Date, Status FROM HabitLogs WHERE HabitID = @HabitID ORDER BY Date ASC`);
+            
+            let current = 0;
+            let max = 0;
+            let prevDate = null;
+            
+            for (const l of logs.recordset) {
+                if (l.Status !== "Missed") {
+                    const thisDate = new Date(l.Date);
+                    if (prevDate && (thisDate - prevDate) === 86400000) {
+                        current++;
+                    } else {
+                        current = 1;
+                    }
+                    if (current > max) max = current;
+                    prevDate = thisDate;
+                } else {
+                    current = 0;
+                    prevDate = null;
+                }
+            }
+            if (max > maxStreak) maxStreak = max;
+        }
+
+        // 3. Perfect Day (Completed all active habits on a single date)
+        let hasPerfectDay = false;
+        if (habits.length > 0) {
+            const perfectDayResult = await pool.request()
+                .input("UserID", userId)
+                .query(`
+                    SELECT hl.Date, 
+                           COUNT(CASE WHEN hl.Status = 'Completed' THEN 1 END) as CompletedCount,
+                           (SELECT COUNT(*) FROM Habits WHERE UserID = @UserID AND Status = 'Active') as ActiveHabits
+                    FROM HabitLogs hl
+                    JOIN Habits h ON h.HabitID = hl.HabitID
+                    WHERE h.UserID = @UserID
+                    GROUP BY hl.Date
+                    HAVING COUNT(CASE WHEN hl.Status = 'Completed' THEN 1 END) = 
+                           (SELECT COUNT(*) FROM Habits WHERE UserID = @UserID AND Status = 'Active')
+                `);
+            if (perfectDayResult.recordset.length > 0) {
+                hasPerfectDay = true;
+            }
+        }
+
+        // Build the achievements list
+        const achievements = [
+            {
+                id: "first_step",
+                title: "First Steps",
+                description: "Log your first habit.",
+                icon: "🌱",
+                unlocked: totalLogs >= 1
+            },
+            {
+                id: "getting_going",
+                title: "Getting Going",
+                description: "Log 10 habits.",
+                icon: "🚀",
+                unlocked: totalLogs >= 10
+            },
+            {
+                id: "century",
+                title: "Century Club",
+                description: "Log 100 habits.",
+                icon: "💯",
+                unlocked: totalLogs >= 100
+            },
+            {
+                id: "consistency_king",
+                title: "Consistency King",
+                description: "Maintain a 7-day streak on any habit.",
+                icon: "👑",
+                unlocked: maxStreak >= 7
+            },
+            {
+                id: "perfectionist",
+                title: "Perfectionist",
+                description: "Complete all active habits in a single day.",
+                icon: "✨",
+                unlocked: hasPerfectDay
+            },
+            {
+                id: "habit_master",
+                title: "Habit Master",
+                description: "Log 500 habits.",
+                icon: "🏋️",
+                unlocked: totalLogs >= 500
+            },
+            {
+                id: "unstoppable",
+                title: "Unstoppable",
+                description: "Maintain a 30-day streak.",
+                icon: "🌟",
+                unlocked: maxStreak >= 30
+            },
+            {
+                id: "reflective",
+                title: "Reflective",
+                description: "Write 10 reflections.",
+                icon: "📝",
+                unlocked: totalReflections >= 10
+            }
+        ];
+
+        res.json({ achievements });
+    } catch (error) {
+        console.log("Error getting achievements:", error);
+        res.status(500).json({ message: "Failed to get achievements" });
+    }
+}
+
 module.exports = {
     getSummary,
     getCalendar,
@@ -879,5 +1033,6 @@ module.exports = {
     getRecentActivity,
     searchAll,
     getHealthScore,
-    getFailurePatterns
+    getFailurePatterns,
+    getAchievements
 };
