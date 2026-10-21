@@ -905,59 +905,79 @@ async function getFailurePatterns(req, res) {
         const pool = await connectDatabase();
         const userId = req.user.userId;
 
-        // Get all active habits
         const habitsResult = await pool.request()
             .input("UserID", userId)
-            .query(`SELECT HabitID, Name FROM Habits WHERE UserID = @UserID AND Status = 'Active'`);
-        
+            .query(`SELECT HabitID, Name, StartDate FROM Habits WHERE UserID = @UserID AND Status = 'Active'`);
+
         const habits = habitsResult.recordset;
         if (habits.length === 0) return res.json({ patterns: [] });
 
-        // Get all logs from the last 30 days
         const logsResult = await pool.request()
             .input("UserID", userId)
             .query(`
-                SELECT hl.HabitID, hl.Date, hl.Status 
+                SELECT hl.HabitID, hl.Date, hl.Status
                 FROM HabitLogs hl
                 JOIN Habits h ON h.HabitID = hl.HabitID
-                WHERE h.UserID = @UserID 
+                WHERE h.UserID = @UserID
                   AND hl.Date >= DATEADD(day, -30, GETDATE())
             `);
 
         const logs = logsResult.recordset;
-        const patterns = [];
 
-        // Days of the week: 0=Sunday, 1=Monday, ... 6=Saturday
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+        const thirtyDaysAgo = new Date(now);
+        thirtyDaysAgo.setDate(now.getDate() - 30);
+        const thirtyDaysAgoStr = `${thirtyDaysAgo.getFullYear()}-${String(thirtyDaysAgo.getMonth() + 1).padStart(2, "0")}-${String(thirtyDaysAgo.getDate()).padStart(2, "0")}`;
+
         const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        const patterns = [];
+        const oneDay = 24 * 60 * 60 * 1000;
 
         for (const habit of habits) {
-            const habitLogs = logs.filter(l => l.HabitID === habit.HabitID);
-            if (habitLogs.length < 3) continue; // Need a few logs to find a pattern
+            const habitStart = habit.StartDate ? toDateString(new Date(habit.StartDate)) : thirtyDaysAgoStr;
+            const walkStart = habitStart > thirtyDaysAgoStr ? habitStart : thirtyDaysAgoStr;
 
-            // Group by day of week
+            if (walkStart > todayStr) continue;
+
+            const habitLogs = logs.filter(l => l.HabitID === habit.HabitID);
+            const logByDate = new Map();
+            for (const log of habitLogs) {
+                logByDate.set(toDateString(new Date(log.Date)), log);
+            }
+
             const dayStats = {};
             dayNames.forEach(d => dayStats[d] = { total: 0, missed: 0 });
 
-            habitLogs.forEach(log => {
-                const logDate = new Date(log.Date);
-                const dayName = dayNames[logDate.getDay()];
-                dayStats[dayName].total++;
-                if (log.Status === "Missed") {
-                    dayStats[dayName].missed++;
-                }
-            });
+            let cursor = new Date(walkStart + "T00:00:00Z");
+            const endDate = new Date(todayStr + "T00:00:00Z");
 
-            // Find the day with the highest failure rate
+            while (cursor < endDate) {
+                const dateStr = toDateString(cursor);
+                const dateObj = new Date(dateStr + "T00:00:00Z");
+                const dayName = dayNames[dateObj.getUTCDay()];
+
+                const log = logByDate.get(dateStr);
+                dayStats[dayName].total += 1;
+                if (!log || log.Status === "Missed") {
+                    dayStats[dayName].missed += 1;
+                }
+
+                cursor = new Date(cursor.getTime() + oneDay);
+            }
+
             let worstDay = null;
             let worstRate = 0;
+            let worstTotal = 0;
 
             for (const day of dayNames) {
                 const stats = dayStats[day];
-                if (stats.total >= 2) { // Only count days with at least 2 logged entries
+                if (stats.total >= 3) {
                     const rate = stats.missed / stats.total;
                     if (rate > worstRate) {
                         worstRate = rate;
                         worstDay = day;
+                        worstTotal = stats.total;
                     }
                 }
             }
@@ -968,15 +988,13 @@ async function getFailurePatterns(req, res) {
                     type: "struggle_day",
                     day: worstDay,
                     failureRate: Math.round(worstRate * 100),
+                    totalOccurrences: worstTotal,
                     message: `You miss "${habit.Name}" ${Math.round(worstRate * 100)}% of the time on ${worstDay}s.`
                 });
             }
         }
 
-        // Sort so the most severe pattern is first
         patterns.sort((a, b) => b.failureRate - a.failureRate);
-
-        // Only send the top 3 insights so the dashboard isn't cluttered
         res.json({ patterns: patterns.slice(0, 3) });
 
     } catch (error) {
