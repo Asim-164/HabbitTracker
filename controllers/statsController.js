@@ -768,7 +768,7 @@ async function getHealthScore(req, res) {
 
         const habitsResult = await pool.request()
             .input("UserID", userId)
-            .query(`SELECT HabitID, Name, TargetValue, Unit FROM Habits WHERE UserID = @UserID AND Status = 'Active'`);
+            .query(`SELECT HabitID, Name, TargetValue, Unit, StartDate FROM Habits WHERE UserID = @UserID AND Status = 'Active'`);
 
         const habits = habitsResult.recordset;
         if (habits.length === 0) {
@@ -777,80 +777,84 @@ async function getHealthScore(req, res) {
 
         const today = new Date();
         const oneDay = 24 * 60 * 60 * 1000;
-        
-        // Helper to format a date as YYYY-MM-DD in local time
+
         function localDateStr(d) {
             const y = d.getFullYear();
             const m = String(d.getMonth() + 1).padStart(2, "0");
             const day = String(d.getDate()).padStart(2, "0");
             return `${y}-${m}-${day}`;
         }
-        
-        // Calculate dates for last 14 days (this week + previous week)
-        const dates = [];
-        for (let i = 0; i < 14; i++) {
-            const d = new Date(today - i * oneDay);
-            dates.push(localDateStr(d));
-        }
 
-        const thisWeekDates = dates.slice(0, 7);
-        const lastWeekDates = dates.slice(7, 14);
+        const todayStr = localDateStr(today);
+        const yesterdayStr = localDateStr(new Date(today - oneDay));
+
+        // Build date arrays for this week (last 7 days, ending today) and last week (7-14 days ago)
+        const thisWeekDates = [];
+        const lastWeekDates = [];
+        for (let i = 0; i < 7; i++) thisWeekDates.push(localDateStr(new Date(today - i * oneDay)));
+        for (let i = 7; i < 14; i++) lastWeekDates.push(localDateStr(new Date(today - i * oneDay)));
 
         const habitScores = await Promise.all(habits.map(async (habit) => {
             const logsResult = await pool.request()
                 .input("HabitID", habit.HabitID)
                 .query(`
-                    SELECT Date, Status, ActualValue 
-                    FROM HabitLogs 
-                    WHERE HabitID = @HabitID 
+                    SELECT Date, Status, ActualValue
+                    FROM HabitLogs
+                    WHERE HabitID = @HabitID
                     AND Date >= DATEADD(day, -14, GETDATE())
                 `);
 
             const logs = logsResult.recordset;
             const target = habit.TargetValue ? Number(habit.TargetValue) : 0;
+            const habitStart = habit.StartDate ? localDateStr(new Date(habit.StartDate)) : null;
 
-            // Calculate score for a specific date range
             const calcScore = (dateArray) => {
-                let logsCount = 0;
+                let daysExpected = 0;
+                let realLogs = 0;
                 let accuracySum = 0;
 
-                dateArray.forEach(dateStr => {
+                for (const dateStr of dateArray) {
+                    // Skip days after today (future)
+                    if (dateStr > todayStr) continue;
+                    // Skip days before the habit existed
+                    if (habitStart && dateStr < habitStart) continue;
+
+                    daysExpected += 1;
+
                     const log = logs.find(l => localDateStr(new Date(l.Date)) === dateStr);
                     if (log) {
-                        logsCount++;
+                        realLogs += 1;
                         if (target > 0) {
                             accuracySum += Math.min(Number(log.ActualValue || 0) / target, 1);
                         } else {
                             accuracySum += log.Status === "Completed" ? 1 : 0;
                         }
                     }
-                });
+                    // No log → backfilled as missed (no contribution to accuracy)
+                }
 
-                const consistency = logsCount / 7;
-                const accuracy = logsCount > 0 ? (accuracySum / logsCount) : 0;
-                
-                // Calculate current streak: consecutive non-missed days ending today or yesterday
+                if (daysExpected === 0) {
+                    return { score: 0, trend: "Steady" };
+                }
+
+                const consistency = realLogs / daysExpected;
+                const accuracy = realLogs > 0 ? (accuracySum / realLogs) : 0;
+
+                // Current streak from today or yesterday
                 let currentStreak = 0;
                 let checkDate = new Date(today);
-                const todayStr = localDateStr(checkDate);
-                const yesterdayStr = localDateStr(new Date(today - oneDay));
-
-                // Allow the streak to start from today or yesterday
                 const hasTodayLog = logs.some(l => localDateStr(new Date(l.Date)) === todayStr && l.Status !== "Missed");
                 const hasYesterdayLog = logs.some(l => localDateStr(new Date(l.Date)) === yesterdayStr && l.Status !== "Missed");
-                
-                if (hasTodayLog) {
-                    checkDate = new Date(today);
-                } else if (hasYesterdayLog) {
-                    checkDate = new Date(today - oneDay);
-                } else {
-                    checkDate = null;
-                }
+
+                if (hasTodayLog) checkDate = new Date(today);
+                else if (hasYesterdayLog) checkDate = new Date(today - oneDay);
+                else checkDate = null;
 
                 if (checkDate) {
                     while (true) {
-                        const dateStr = localDateStr(checkDate);
-                        const log = logs.find(l => localDateStr(new Date(l.Date)) === dateStr);
+                        const dStr = localDateStr(checkDate);
+                        if (habitStart && dStr < habitStart) break;
+                        const log = logs.find(l => localDateStr(new Date(l.Date)) === dStr);
                         if (!log || log.Status === "Missed") break;
                         currentStreak++;
                         checkDate = new Date(checkDate - oneDay);
@@ -859,27 +863,26 @@ async function getHealthScore(req, res) {
 
                 const streakScore = Math.min(currentStreak / 7, 1);
                 const healthScore = (consistency * 0.5) + (accuracy * 0.3) + (streakScore * 0.2);
-                return Math.round(healthScore * 100);
+                return { score: Math.round(healthScore * 100) };
             };
 
-            const thisWeekScore = calcScore(thisWeekDates);
-            const lastWeekScore = calcScore(lastWeekDates);
+            const thisWeek = calcScore(thisWeekDates);
+            const lastWeek = calcScore(lastWeekDates);
 
             let trend = "Steady";
-            if (thisWeekScore - lastWeekScore > 5) trend = "Improving";
-            else if (thisWeekScore - lastWeekScore < -5) trend = "Declining";
+            if (thisWeek.score - lastWeek.score > 5) trend = "Improving";
+            else if (thisWeek.score - lastWeek.score < -5) trend = "Declining";
 
             return {
                 habitId: habit.HabitID,
                 name: habit.Name,
-                score: thisWeekScore,
+                score: thisWeek.score,
                 trend: trend
             };
         }));
 
         const overallScore = Math.round(habitScores.reduce((sum, h) => sum + h.score, 0) / habitScores.length);
-        
-        // Determine overall trend based on majority of habits
+
         const trends = habitScores.map(h => h.trend);
         let overallTrend = "Steady";
         if (trends.filter(t => t === "Improving").length > trends.filter(t => t === "Declining").length) overallTrend = "Improving";
