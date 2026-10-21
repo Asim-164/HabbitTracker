@@ -608,7 +608,20 @@
 
             const rate = data.completionRate !== null ? data.completionRate + "%" : "—";
             const bestHabit = data.bestHabit ? data.bestHabit.name : "—";
-            const toughestDay = data.worstDay ? data.worstDay.name : "—";
+
+            // Day insight: show Best Day if no tough day, Toughest if there is one
+            let dayLabel = "Best Day";
+            let dayIcon = "🌟";
+            let dayValue = "—";
+            if (data.worstDay) {
+                dayLabel = "Toughest Day";
+                dayIcon = "⚠️";
+                dayValue = data.worstDay.name;
+            } else if (data.bestDay) {
+                dayLabel = "Best Day";
+                dayIcon = "🌟";
+                dayValue = data.bestDay.name;
+            }
 
             let headline = "";
             if (data.completionRate >= 80) {
@@ -634,10 +647,10 @@
                         </div>
                     </div>
                     <div class="weekly-highlight">
-                        <div class="weekly-highlight__icon">⚠️</div>
+                        <div class="weekly-highlight__icon">${dayIcon}</div>
                         <div class="weekly-highlight__content">
-                            <div class="weekly-highlight__label">Toughest Day</div>
-                            <div class="weekly-highlight__value">${toughestDay}</div>
+                            <div class="weekly-highlight__label">${dayLabel}</div>
+                            <div class="weekly-highlight__value">${dayValue}</div>
                         </div>
                     </div>
                     <div class="weekly-highlight">

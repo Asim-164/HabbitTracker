@@ -1394,7 +1394,6 @@ async function getWeeklyReview(req, res) {
         const offset = parseInt(req.query.weekOffset || "0", 10);
         const today = new Date();
 
-        // Find this Monday
         const dayOfWeek = today.getDay();
         const daysSinceMonday = (dayOfWeek + 6) % 7;
         const monday = new Date(today);
@@ -1413,13 +1412,14 @@ async function getWeeklyReview(req, res) {
         const from = fmtDate(monday);
         const to = fmtDate(sunday);
 
-        // Get active habits
+        const todayStr = fmtDate(today);
+        const isCompleteWeek = offset > 0;
+
         const habitsResult = await pool.request()
             .input("UserID", userId)
-            .query(`SELECT HabitID, Name, TargetValue, Unit FROM Habits WHERE UserID = @UserID AND Status = 'Active'`);
+            .query(`SELECT HabitID, Name, TargetValue, Unit, StartDate FROM Habits WHERE UserID = @UserID AND Status = 'Active'`);
         const habits = habitsResult.recordset;
 
-        // Get all logs for the week
         const logsResult = await pool.request()
             .input("UserID", userId)
             .input("From", from)
@@ -1434,60 +1434,191 @@ async function getWeeklyReview(req, res) {
             `);
         const logs = logsResult.recordset;
 
-        // Total counts
-        const totalLogs = logs.length;
-        const completedCount = logs.filter(l => l.Status === "Completed").length;
-        const completionRate = totalLogs > 0 ? Math.round((completedCount / totalLogs) * 100) : null;
+        const logsByHabit = new Map();
+        for (const log of logs) {
+            if (!logsByHabit.has(log.HabitID)) logsByHabit.set(log.HabitID, []);
+            logsByHabit.get(log.HabitID).push(log);
+        }
 
-        // Best / toughest day
         const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
         const perDay = {};
-        dayNames.forEach(d => perDay[d] = { total: 0, completed: 0 });
+        dayNames.forEach(d => perDay[d] = { total: 0, completed: 0, missed: 0, realLogs: 0 });
 
-        logs.forEach(l => {
-            const dateObj = new Date(l.Date);
-            const jsDay = dateObj.getDay(); // 0=Sun
-            const dayIdx = (jsDay + 6) % 7; // 0=Mon
-            const dayName = dayNames[dayIdx];
-            perDay[dayName].total++;
-            if (l.Status === "Completed") perDay[dayName].completed++;
-        });
+        // Track each habit's totals
+        const perHabit = new Map();
+        for (const h of habits) {
+            perHabit.set(h.HabitID, { name: h.Name, completed: 0, partial: 0, missed: 0, realLogs: 0 });
+        }
 
-        let bestDay = null, bestDayRate = -1;
-        let worstDay = null, worstDayRate = 101;
+        let totalLogs = 0;
+        let completedCount = 0;
+        let partialCount = 0;
+        let missedCount = 0;
 
-        dayNames.forEach(d => {
-            const stats = perDay[d];
-            if (stats.total > 0) {
-                const rate = stats.completed / stats.total;
-                if (rate > bestDayRate) { bestDayRate = rate; bestDay = d; }
-                if (rate < worstDayRate) { worstDayRate = rate; worstDay = d; }
+        const oneDay = 24 * 60 * 60 * 1000;
+
+        for (const habit of habits) {
+            const habitStart = habit.StartDate ? toDateString(new Date(habit.StartDate)) : from;
+            const walkStart = habitStart > from ? habitStart : from;
+            const walkEnd = isCompleteWeek
+                ? to
+                : (todayStr < to ? todayStr : to);
+
+            if (walkStart > walkEnd) continue;
+
+            const habitLogs = logsByHabit.get(habit.HabitID) || [];
+            const loggedDates = new Set();
+            for (const log of habitLogs) {
+                loggedDates.add(toDateString(new Date(log.Date)));
             }
-        });
 
-        // Best / weakest habit
-        let bestHabit = null, bestHabitRate = -1;
-        let weakestHabit = null, weakestHabitRate = 101;
+            const stats = perHabit.get(habit.HabitID);
 
-        habits.forEach(h => {
-            const hLogs = logs.filter(l => l.HabitID === h.HabitID);
-            if (hLogs.length === 0) return;
-            const hCompleted = hLogs.filter(l => l.Status === "Completed").length;
-            const rate = hCompleted / hLogs.length;
-            if (rate > bestHabitRate) { bestHabitRate = rate; bestHabit = { name: h.Name, rate: Math.round(rate * 100), logs: hLogs.length }; }
-            if (rate < weakestHabitRate) { weakestHabitRate = rate; weakestHabit = { name: h.Name, rate: Math.round(rate * 100), logs: hLogs.length }; }
-        });
+            let cursor = new Date(walkStart + "T00:00:00Z");
+            const endDate = new Date(walkEnd + "T00:00:00Z");
+
+            while (cursor <= endDate) {
+                const dateStr = toDateString(cursor);
+
+                const dateObj = new Date(dateStr + "T00:00:00Z");
+                const jsDay = dateObj.getUTCDay();
+                const dayIdx = (jsDay + 6) % 7;
+                const dayName = dayNames[dayIdx];
+
+                perDay[dayName].total += 1;
+
+                const log = habitLogs.find(l => toDateString(new Date(l.Date)) === dateStr);
+
+                if (log) {
+                    stats.realLogs += 1;
+                    totalLogs += 1;
+                    perDay[dayName].realLogs += 1;
+
+                    if (log.Status === "Completed") {
+                        stats.completed += 1;
+                        completedCount += 1;
+                        perDay[dayName].completed += 1;
+                    } else if (log.Status === "Partial") {
+                        stats.partial += 1;
+                        partialCount += 1;
+                    } else if (log.Status === "Missed") {
+                        stats.missed += 1;
+                        missedCount += 1;
+                        perDay[dayName].missed += 1;
+                    }
+                } else {
+                    stats.missed += 1;
+                    missedCount += 1;
+                    perDay[dayName].missed += 1;
+                }
+
+                cursor = new Date(cursor.getTime() + oneDay);
+            }
+        }
+
+        // totalLogs now = real logs + backfilled misses
+        const effectiveLogs = completedCount + partialCount + missedCount;
+        const completionRate = effectiveLogs > 0
+            ? Math.round((completedCount / effectiveLogs) * 100)
+            : null;
+
+        // Best / worst day — only for complete weeks with >= 2 days of real logs
+        const daysWithRealLogs = dayNames.filter(d => perDay[d].realLogs > 0);
+        let bestDay = null;
+        let worstDay = null;
+
+        if (isCompleteWeek && daysWithRealLogs.length >= 2) {
+            let maxMissed = -1;
+            let minMissed = Infinity;
+            let worstName = null;
+            let bestName = null;
+            let worstRealLogs = 0;
+            let bestRealLogs = 0;
+
+            daysWithRealLogs.forEach(d => {
+                const stats = perDay[d];
+                const missed = stats.missed;
+                const real = stats.realLogs;
+
+                // Worst: most missed; tie → more real logs wins
+                if (missed > maxMissed || (missed === maxMissed && real > worstRealLogs)) {
+                    maxMissed = missed;
+                    worstName = d;
+                    worstRealLogs = real;
+                }
+
+                // Best: fewest missed; tie → more real logs wins
+                if (missed < minMissed || (missed === minMissed && real > bestRealLogs)) {
+                    minMissed = missed;
+                    bestName = d;
+                    bestRealLogs = real;
+                }
+            });
+
+            if (worstName) {
+                worstDay = { name: worstName, missed: maxMissed, realLogs: worstRealLogs };
+            }
+            if (bestName) {
+                bestDay = { name: bestName, missed: minMissed, realLogs: bestRealLogs };
+            }
+
+            // If no day had any misses, "worst" isn't meaningful → null
+            if (maxMissed === 0) worstDay = null;
+        }
+
+        // Best / weakest habit — only if there's a strict winner (no ties)
+        let bestHabit = null;
+        let weakestHabit = null;
+        let bestRate = -1;
+        let worstRate = 101;
+        let bestTied = false;
+        let worstTied = false;
+
+        const habitRates = [];
+        for (const [id, stats] of perHabit) {
+            const effective = stats.completed + stats.partial + stats.missed;
+            if (effective === 0) continue;
+            habitRates.push({
+                name: stats.name,
+                rate: stats.completed / effective,
+                realLogs: stats.realLogs
+            });
+        }
+
+        if (habitRates.length > 1) {
+            let bestVal = -1;
+            let worstVal = 101;
+
+            for (const h of habitRates) {
+                if (h.rate > bestVal) bestVal = h.rate;
+                if (h.rate < worstVal) worstVal = h.rate;
+            }
+
+            const bestMatches = habitRates.filter(h => h.rate === bestVal);
+            const worstMatches = habitRates.filter(h => h.rate === worstVal);
+
+            if (bestMatches.length === 1) {
+                bestHabit = { name: bestMatches[0].name, rate: Math.round(bestVal * 100), realLogs: bestMatches[0].realLogs };
+            }
+            if (worstMatches.length === 1 && worstVal < bestVal) {
+                weakestHabit = { name: worstMatches[0].name, rate: Math.round(worstVal * 100), realLogs: worstMatches[0].realLogs };
+            }
+        }   
 
         res.json({
             from,
             to,
             weekOffset: offset,
-            totalLogs,
+            isCompleteWeek,
+            totalLogs: effectiveLogs,
+            realLogs: logs.length,
             completedCount,
+            partialCount,
+            missedCount,
             completionRate,
             activeHabits: habits.length,
-            bestDay: bestDay ? { name: bestDay, rate: Math.round(bestDayRate * 100) } : null,
-            worstDay: worstDay ? { name: worstDay, rate: Math.round(worstDayRate * 100) } : null,
+            bestDay,
+            worstDay,
             bestHabit,
             weakestHabit
         });
