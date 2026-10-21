@@ -80,6 +80,10 @@
             form.difficulty.value = habit.Difficulty || "Medium";
             form.startDate.value = (habit.StartDate || "").slice(0, 10);
 
+            form.startDate.disabled = true;
+            const startHint = document.getElementById("start-date-hint");
+            if (startHint) startHint.hidden = false;
+
             const isMeasurable = habit.TargetValue !== null && Number(habit.TargetValue) > 0;
             measurableCheckbox.checked = isMeasurable;
             if (isMeasurable) {

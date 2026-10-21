@@ -417,6 +417,7 @@
 
 .habit-form__msg.success { color: var(--sage-600); }
 .habit-form__hint { font-size: 12px; color: var(--ink-500); margin-top: 4px; }
+.habit-form__field input:disabled { background: var(--sage-50); color: var(--ink-500); cursor: not-allowed; opacity: 0.7; }
 
 /* Password Wrap */
 .password-wrap { position: relative; display: flex; align-items: center; }
