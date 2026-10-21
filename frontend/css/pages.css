@@ -137,6 +137,9 @@
 .stats-table .num { text-align: right; font-variant-numeric: tabular-nums; }
 .stats-table__wrap { overflow-x: auto; }
 @media (max-width: 900px) { .stats__summary { grid-template-columns: repeat(2, 1fr); } .report__row { grid-template-columns: 90px 1fr 70px; } }
+.report__row.is-in-progress .report__label { font-style: italic; color: var(--ink-300); }
+.report__row.is-in-progress .report__bar-fill { background: repeating-linear-gradient(45deg, var(--sage-300), var(--sage-300) 6px, var(--sage-200) 6px, var(--sage-200) 12px); }
+.report__row.is-in-progress .report__value { color: var(--ink-300); font-style: italic; }
 
 /* ---------- Tracking ---------- */
 .tracking__head { display: flex; align-items: center; gap: var(--space-4); margin-bottom: 0; }
@@ -582,4 +585,98 @@
         width: 100%;
         margin: var(--space-2) 0;
     }
+}
+
+/* ---------- Weekly Review ---------- */
+.weekly-header {
+    margin-bottom: var(--space-5);
+}
+
+.weekly-headline {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--ink-900);
+    margin: 0 0 4px 0;
+    letter-spacing: -0.01em;
+}
+
+.weekly-sub {
+    font-size: 13px;
+    color: var(--ink-500);
+    margin: 0;
+}
+
+.weekly-highlights {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-3);
+}
+
+.weekly-highlight {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+}
+
+.weekly-highlight__icon {
+    font-size: 24px;
+    flex-shrink: 0;
+    background: var(--sage-50);
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.weekly-highlight__content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.weekly-highlight__label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-500);
+    font-weight: 600;
+}
+
+.weekly-highlight__value {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink-900);
+}
+
+.weekly-empty {
+    text-align: center;
+    padding: var(--space-5);
+    color: var(--ink-500);
+    font-size: 14px;
+}
+
+@media (max-width: 700px) {
+    .weekly-highlights {
+        grid-template-columns: 1fr;
+    }
+}
+
+.weekly-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--line);
+}
+
+.weekly-nav .btn-secondary {
+    padding: 8px 16px;
+    font-size: 13px;
 }

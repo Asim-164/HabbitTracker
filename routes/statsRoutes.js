@@ -4,7 +4,7 @@ const router = express.Router();
 
 const authenticateToken = require("../middleware/authMiddleware");
 
-const { getSummary, getCalendar, getReport, getRecentActivity, searchAll, getHealthScore, getFailurePatterns, getAchievements, getSuggestions, getRelationships } = require("../controllers/statsController");
+const { getSummary, getCalendar, getReport, getRecentActivity, searchAll, getHealthScore, getFailurePatterns, getAchievements, getSuggestions, getRelationships, getWeeklyReview, getHabitBreakdown } = require("../controllers/statsController");
 
 router.get("/summary", authenticateToken, getSummary);
 router.get("/calendar", authenticateToken, getCalendar);
@@ -16,5 +16,7 @@ router.get("/patterns", authenticateToken, getFailurePatterns);
 router.get("/achievements", authenticateToken, getAchievements);
 router.get("/suggestions", authenticateToken, getSuggestions);
 router.get("/relationships", authenticateToken, getRelationships);
+router.get("/weekly-review", authenticateToken, getWeeklyReview);
+router.get("/habit-breakdown", authenticateToken, getHabitBreakdown);
 
 module.exports = router;

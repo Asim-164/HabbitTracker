@@ -243,7 +243,7 @@
                 const isMeasurable = habit.TargetValue !== null && Number(habit.TargetValue) > 0;
                 const pct = r && r.completionRate !== null ? Math.round(r.completionRate * 100) : 0;
                 const actualText = isMeasurable
-                    ? `Total this week: ${r ? r.totalActual : 0} ${habit.Unit || ""} out of ${r ? r.totalTarget : 0} ${habit.Unit || ""}`.trim()
+                    ? `Total this week: ${r ? r.totalActual : 0} ${habit.Unit || ""} of ${r ? r.totalTarget : 0} ${habit.Unit || ""}`.trim()
                     : "—";
 
                 const target = habit.TargetValue !== null ? Number(habit.TargetValue) : 0;
@@ -373,6 +373,7 @@
             loadAchievements();       
             loadSuggestions();     
             loadRelationships();
+            loadWeeklyReview(0);            
 
         } catch (err) {
             container.innerHTML = `<p class="muted small">Could not load habits: ${err.message}</p>`;
@@ -571,6 +572,101 @@
         } catch (err) {
             panel.hidden = true;
         }
+    }
+
+    let weeklyReviewOffset = 0;
+
+    async function loadWeeklyReview(offset) {
+        if (typeof offset === "number") weeklyReviewOffset = offset;
+
+        const el = document.getElementById("weekly-review-content");
+        const titleEl = document.querySelector("#weekly-review-panel .panel__title");
+        if (!el) return;
+
+        if (titleEl) {
+            if (weeklyReviewOffset === 0) titleEl.textContent = "This Week's Review";
+            else if (weeklyReviewOffset === 1) titleEl.textContent = "Last Week's Review";
+            else titleEl.textContent = `${weeklyReviewOffset} Weeks Ago`;
+        }
+
+        el.innerHTML = `<p class="muted small">Loading…</p>`;
+
+        try {
+            const data = await api.get(`/stats/weekly-review?weekOffset=${weeklyReviewOffset}`);
+
+            if (!data || data.totalLogs === 0) {
+                el.innerHTML = `
+                    <div class="weekly-empty">No activity for this week.</div>
+                    <div class="weekly-nav">
+                        <button type="button" class="btn-secondary" id="wr-prev">← Previous Week</button>
+                        ${weeklyReviewOffset > 0 ? `<button type="button" class="btn-secondary" id="wr-next">Next Week →</button>` : ""}
+                    </div>
+                `;
+                wireNav();
+                return;
+            }
+
+            const rate = data.completionRate !== null ? data.completionRate + "%" : "—";
+            const bestHabit = data.bestHabit ? data.bestHabit.name : "—";
+            const toughestDay = data.worstDay ? data.worstDay.name : "—";
+
+            let headline = "";
+            if (data.completionRate >= 80) {
+                headline = `You crushed it with a ${rate} completion rate!`;
+            } else if (data.completionRate >= 50) {
+                headline = `Good progress! You hit ${rate} of your habits.`;
+            } else {
+                headline = `You completed ${rate} of your habits. Let's push for a better week!`;
+            }
+
+            el.innerHTML = `
+                <div class="weekly-header">
+                    <h4 class="weekly-headline">${headline}</h4>
+                    <p class="weekly-sub">${data.totalLogs} logs across ${data.activeHabits} habits (${data.from.slice(5)} → ${data.to.slice(5)})</p>
+                </div>
+
+                <div class="weekly-highlights">
+                    <div class="weekly-highlight">
+                        <div class="weekly-highlight__icon">🏆</div>
+                        <div class="weekly-highlight__content">
+                            <div class="weekly-highlight__label">Best Habit</div>
+                            <div class="weekly-highlight__value">${bestHabit}</div>
+                        </div>
+                    </div>
+                    <div class="weekly-highlight">
+                        <div class="weekly-highlight__icon">⚠️</div>
+                        <div class="weekly-highlight__content">
+                            <div class="weekly-highlight__label">Toughest Day</div>
+                            <div class="weekly-highlight__value">${toughestDay}</div>
+                        </div>
+                    </div>
+                    <div class="weekly-highlight">
+                        <div class="weekly-highlight__icon">✅</div>
+                        <div class="weekly-highlight__content">
+                            <div class="weekly-highlight__label">Completed</div>
+                            <div class="weekly-highlight__value">${data.completedCount} of ${data.totalLogs}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="weekly-nav">
+                    <button type="button" class="btn-secondary" id="wr-prev">← Previous Week</button>
+                    ${weeklyReviewOffset > 0 ? `<button type="button" class="btn-secondary" id="wr-next">Next Week →</button>` : ""}
+                </div>
+            `;
+
+            wireNav();
+
+        } catch (err) {
+            el.innerHTML = `<p class="muted small">Could not load weekly review: ${err.message}</p>`;
+        }
+    }
+
+    function wireNav() {
+        const prevBtn = document.getElementById("wr-prev");
+        const nextBtn = document.getElementById("wr-next");
+        if (prevBtn) prevBtn.addEventListener("click", () => loadWeeklyReview(weeklyReviewOffset + 1));
+        if (nextBtn) nextBtn.addEventListener("click", () => loadWeeklyReview(Math.max(0, weeklyReviewOffset - 1)));
     }
 
     // Re-fetch fresh data every time the page is shown (including back button)

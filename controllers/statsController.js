@@ -15,9 +15,7 @@ async function getSummary(req, res) {
         const range = parseRange(req.query);
 
         if (range.error) {
-            return res.status(400).json({
-                message: range.error
-            });
+            return res.status(400).json({ message: range.error });
         }
 
         const { from, to, daysInRange } = range;
@@ -28,7 +26,7 @@ async function getSummary(req, res) {
         const habitsResult = await pool.request()
             .input("UserID", userId)
             .query(`
-                SELECT HabitID, Name, Unit, TargetValue, Frequency, Status
+                SELECT HabitID, Name, Unit, TargetValue, Frequency, Status, StartDate
                 FROM Habits
                 WHERE UserID = @UserID AND Status = 'Active'
                 ORDER BY HabitID ASC
@@ -50,46 +48,82 @@ async function getSummary(req, res) {
 
         const logsByHabit = new Map();
         for (const log of logsResult.recordset) {
-            if (!logsByHabit.has(log.HabitID)) {
-                logsByHabit.set(log.HabitID, []);
-            }
+            if (!logsByHabit.has(log.HabitID)) logsByHabit.set(log.HabitID, []);
             logsByHabit.get(log.HabitID).push(log);
         }
 
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
         const habits = [];
-        let overallLogs = 0;
         let overallCompleted = 0;
         let overallPartial = 0;
         let overallMissed = 0;
+        let overallActual = 0;
+        let overallDaysExpected = 0;
 
         for (const habit of habitsResult.recordset) {
             const logs = logsByHabit.get(habit.HabitID) || [];
+            const habitStartDate = habit.StartDate ? toDateString(new Date(habit.StartDate)) : from;
+            const walkStart = habitStartDate > from ? habitStartDate : from;
 
-            let completedCount = 0;
-            let partialCount = 0;
-            let missedCount = 0;
+            if (walkStart > to) {
+                habits.push({
+                    habitId: habit.HabitID,
+                    name: habit.Name,
+                    unit: habit.Unit,
+                    targetValue: habit.TargetValue === null ? null : Number(habit.TargetValue),
+                    frequency: habit.Frequency,
+                    status: habit.Status,
+                    logsInRange: 0,
+                    completedCount: 0,
+                    partialCount: 0,
+                    missedCount: 0,
+                    totalActual: 0,
+                    totalTarget: habit.TargetValue === null ? null : 0,
+                    completionRate: null,
+                    consistencyRate: null
+                });
+                continue;
+            }
+
+            const loggedDates = new Set();
+            let completed = 0;
+            let partial = 0;
+            let missed = 0;
             let totalActual = 0;
 
             for (const log of logs) {
-                if (log.Status === "Completed") completedCount += 1;
-                else if (log.Status === "Partial") partialCount += 1;
-                else if (log.Status === "Missed") missedCount += 1;
-
+                loggedDates.add(toDateString(new Date(log.Date)));
+                if (log.Status === "Completed") completed += 1;
+                else if (log.Status === "Partial") partial += 1;
+                else if (log.Status === "Missed") missed += 1;
                 totalActual += Number(log.ActualValue ?? 0);
             }
 
-            const logsInRange = logs.length;
+            const oneDay = 24 * 60 * 60 * 1000;
+            let cursor = new Date(walkStart + "T00:00:00Z");
+            const endDate = new Date(to + "T00:00:00Z");
+            let daysExpected = 0;
+
+            while (cursor <= endDate) {
+                const dateStr = toDateString(cursor);
+                if (dateStr > todayStr) {
+                    cursor = new Date(cursor.getTime() + oneDay);
+                    continue;
+                }
+                daysExpected += 1;
+                if (!loggedDates.has(dateStr)) missed += 1;
+                cursor = new Date(cursor.getTime() + oneDay);
+            }
+
             const totalTarget = habit.TargetValue === null
                 ? null
-                : Number(habit.TargetValue) * daysInRange;
+                : Number(habit.TargetValue) * daysExpected;
 
-            const completionRate = logsInRange === 0
-                ? null
-                : completedCount / logsInRange;
-
-            const consistencyRate = daysInRange === 0
-                ? null
-                : logsInRange / daysInRange;
+            const totalEffective = completed + partial + missed;
+            const completionRate = totalEffective === 0 ? null : completed / totalEffective;
+            const consistencyRate = daysExpected === 0 ? null : logs.length / daysExpected;
 
             habits.push({
                 habitId: habit.HabitID,
@@ -98,50 +132,42 @@ async function getSummary(req, res) {
                 targetValue: habit.TargetValue === null ? null : Number(habit.TargetValue),
                 frequency: habit.Frequency,
                 status: habit.Status,
-                logsInRange,
-                completedCount,
-                partialCount,
-                missedCount,
+                logsInRange: totalEffective,
+                completedCount: completed,
+                partialCount: partial,
+                missedCount: missed,
                 totalActual,
                 totalTarget,
                 completionRate,
                 consistencyRate
             });
 
-            overallLogs += logsInRange;
-            overallCompleted += completedCount;
-            overallPartial += partialCount;
-            overallMissed += missedCount;
+            overallCompleted += completed;
+            overallPartial += partial;
+            overallMissed += missed;
+            overallActual += totalActual;
+            overallDaysExpected += daysExpected;
         }
+
+        const overallEffective = overallCompleted + overallPartial + overallMissed;
 
         const overall = {
             habitsTracked: habits.length,
-            totalLogs: overallLogs,
+            totalLogs: overallEffective,
             completedCount: overallCompleted,
             partialCount: overallPartial,
             missedCount: overallMissed,
-            completionRate: overallLogs === 0
+            completionRate: overallEffective === 0 ? null : overallCompleted / overallEffective,
+            consistencyRate: overallDaysExpected === 0
                 ? null
-                : overallCompleted / overallLogs,
-            consistencyRate: daysInRange === 0
-                ? null
-                : overallLogs / (daysInRange * habits.length)
+                : (overallCompleted + overallPartial) / overallDaysExpected
         };
 
-        res.json({
-            from,
-            to,
-            daysInRange,
-            overall,
-            habits
-        });
-        
-      } catch (error) {
-        console.log("Error getting stats summary:", error);
+        res.json({ from, to, daysInRange, overall, habits });
 
-        res.status(500).json({
-            message: "Failed to get stats summary"
-        });
+    } catch (error) {
+        console.log("Error getting stats summary:", error);
+        res.status(500).json({ message: "Failed to get stats summary" });
     }
 }
 
@@ -163,7 +189,7 @@ async function getCalendar(req, res) {
             });
         }
 
-               const [yearStr, monthStr] = month.split("-");
+        const [yearStr, monthStr] = month.split("-");
         const year = Number(yearStr);
         const monthIndex = Number(monthStr) - 1;
 
@@ -180,7 +206,7 @@ async function getCalendar(req, res) {
             .input("HabitID", habitId)
             .input("UserID", userId)
             .query(`
-                SELECT HabitID, Name, Unit, TargetValue
+                SELECT HabitID, Name, Unit, TargetValue, StartDate
                 FROM Habits
                 WHERE HabitID = @HabitID AND UserID = @UserID
             `);
@@ -210,6 +236,13 @@ async function getCalendar(req, res) {
             logsByDate.set(toDateString(log.Date), log);
         }
 
+        // Habit start date — days before this are "not yet a habit"
+        const habitStartDate = habit.StartDate ? toDateString(new Date(habit.StartDate)) : from;
+
+        // Today in local time (days from today onward are not yet "missed")
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
         const days = [];
         const daysInMonth = lastDay.getUTCDate();
 
@@ -224,7 +257,15 @@ async function getCalendar(req, res) {
                     status: log.Status,
                     actualValue: Number(log.ActualValue ?? 0)
                 });
+            } else if (dateStr >= habitStartDate && dateStr < todayStr) {
+                // No log, past day, habit already existed → Missed
+                days.push({
+                    date: dateStr,
+                    status: "Missed",
+                    actualValue: 0
+                });
             } else {
+                // Before habit started, or today/future
                 days.push({
                     date: dateStr,
                     status: null,
@@ -264,6 +305,7 @@ async function getHabitStats(req, res) {
         }
 
         const { from, to, daysInRange } = range;
+        const useBackfill = !!(req.query.from && req.query.to);
 
         const asOf = req.query.asOf || toDateString(new Date());
 
@@ -274,7 +316,7 @@ async function getHabitStats(req, res) {
             .input("HabitID", habitId)
             .input("UserID", userId)
             .query(`
-                SELECT HabitID, Name, Unit, TargetValue, Frequency, Status
+                SELECT HabitID, Name, Unit, TargetValue, Frequency, Status, StartDate
                 FROM Habits
                 WHERE HabitID = @HabitID AND UserID = @UserID
             `);
@@ -292,7 +334,7 @@ async function getHabitStats(req, res) {
             .input("From", from)
             .input("To", to)
             .query(`
-                SELECT Status, ActualValue
+                SELECT Date, Status, ActualValue
                 FROM HabitLogs
                 WHERE HabitID = @HabitID
                     AND Date >= @From
@@ -312,7 +354,39 @@ async function getHabitStats(req, res) {
             totalActual += Number(log.ActualValue ?? 0);
         }
 
-        const logsInRange = rangeLogs.recordset.length;
+        let logsInRange = rangeLogs.recordset.length;
+
+        // Backfill only when caller explicitly passes from & to (Statistics page)
+        if (useBackfill) {
+            const habitStartDate = habit.StartDate ? toDateString(new Date(habit.StartDate)) : from;
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+            const loggedDates = new Set();
+            for (const log of rangeLogs.recordset) {
+                loggedDates.add(toDateString(new Date(log.Date)));
+            }
+
+            const walkStart = habitStartDate > from ? habitStartDate : from;
+            let backfilledMisses = 0;
+
+            if (walkStart <= to) {
+                const oneDay = 24 * 60 * 60 * 1000;
+                let cursor = new Date(walkStart + "T00:00:00Z");
+                const endDate = new Date(to + "T00:00:00Z");
+
+                while (cursor <= endDate) {
+                    const dateStr = toDateString(cursor);
+                    if (!loggedDates.has(dateStr) && dateStr < todayStr) {
+                        backfilledMisses++;
+                        missedCount++;
+                    }
+                    cursor = new Date(cursor.getTime() + oneDay);
+                }
+            }
+
+            logsInRange = rangeLogs.recordset.length + backfilledMisses;
+        }
         const totalTarget = habit.TargetValue === null
             ? null
             : Number(habit.TargetValue) * daysInRange;
@@ -419,7 +493,9 @@ async function getReport(req, res) {
         }
 
         const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
+        // Build buckets (oldest first)
         const buckets = [];
         if (groupBy === "week") {
             const dayOfWeek = now.getUTCDay();
@@ -438,7 +514,8 @@ async function getReport(req, res) {
 
                 buckets.push({
                     start: toDateString(start),
-                    end: toDateString(end)
+                    end: toDateString(end),
+                    label: isoWeekLabel(start)
                 });
             }
         } else {
@@ -456,7 +533,8 @@ async function getReport(req, res) {
 
                 buckets.push({
                     start: toDateString(start),
-                    end: toDateString(end)
+                    end: toDateString(end),
+                    label: toDateString(start).slice(0, 7)
                 });
             }
         }
@@ -467,6 +545,14 @@ async function getReport(req, res) {
         const pool = await connectDatabase();
         const userId = req.user.userId;
 
+        const habitsResult = await pool.request()
+            .input("UserID", userId)
+            .query(`
+                SELECT HabitID, TargetValue, StartDate
+                FROM Habits
+                WHERE UserID = @UserID AND Status = 'Active'
+            `);
+
         const logsResult = await pool.request()
             .input("UserID", userId)
             .input("From", from)
@@ -476,102 +562,127 @@ async function getReport(req, res) {
                 FROM HabitLogs hl
                 JOIN Habits h ON h.HabitID = hl.HabitID
                 WHERE h.UserID = @UserID
-                    AND h.Status = 'Active'
                     AND hl.Date >= @From
                     AND hl.Date <= @To
-                ORDER BY hl.Date ASC
             `);
 
-        const rows = buckets.map((bucket) => ({
-            periodLabel: null,
-            periodStart: bucket.start,
-            periodEnd: bucket.end,
-            daysInPeriod: daysBetweenInclusive(bucket.start, bucket.end),
-            totalLogs: 0,
-            completedCount: 0,
-            partialCount: 0,
-            missedCount: 0,
-            totalActual: 0,
-            totalTarget: 0,
-            completionRate: null,
-            consistencyRate: null,
-            _habitsWithLogs: new Set()
-        }));
-
-        const habitsResult = await pool.request()
-            .input("UserID", userId)
-            .query(`
-                SELECT HabitID, TargetValue
-                FROM Habits
-                WHERE UserID = @UserID AND Status = 'Active'
-            `);
-
-        const targetByHabit = new Map();
-        for (const habit of habitsResult.recordset) {
-            targetByHabit.set(habit.HabitID, habit.TargetValue);
-        }
-
+        const logsByHabit = new Map();
         for (const log of logsResult.recordset) {
-            const logDate = toDateString(log.Date);
-
-            const row = rows.find((r) =>
-                logDate >= r.periodStart && logDate <= r.periodEnd
-            );
-
-            if (!row) continue;
-
-            row.totalLogs += 1;
-            if (log.Status === "Completed") row.completedCount += 1;
-            else if (log.Status === "Partial") row.partialCount += 1;
-            else if (log.Status === "Missed") row.missedCount += 1;
-
-            row.totalActual += Number(log.ActualValue ?? 0);
-            row._habitsWithLogs.add(log.HabitID);
+            if (!logsByHabit.has(log.HabitID)) logsByHabit.set(log.HabitID, []);
+            logsByHabit.get(log.HabitID).push(log);
         }
 
-        for (const row of rows) {
-            const habitsWithLogs = row._habitsWithLogs.size;
+        const oneDay = 24 * 60 * 60 * 1000;
+        const rows = [];
 
-            let targetSum = 0;
-            for (const habitId of row._habitsWithLogs) {
-                const targetValue = targetByHabit.get(habitId);
-                if (targetValue !== null && targetValue !== undefined) {
-                    targetSum += Number(targetValue);
+        for (const bucket of buckets) {
+            const isInProgress = todayStr >= bucket.start && todayStr <= bucket.end;
+
+            let totalLogs = 0;
+            let completedCount = 0;
+            let partialCount = 0;
+            let missedCount = 0;
+            let totalActual = 0;
+            let totalTarget = 0;
+
+            for (const habit of habitsResult.recordset) {
+                const habitStart = habit.StartDate ? toDateString(new Date(habit.StartDate)) : bucket.start;
+
+                // Habit existed during this bucket if StartDate is on or before bucket end
+                if (habitStart > bucket.end) continue;
+
+                const walkStart = habitStart > bucket.start ? habitStart : bucket.start;
+                const walkEndDate = isInProgress && todayStr < bucket.end ? todayStr : bucket.end;
+                const walkEnd = walkEndDate > bucket.end ? bucket.end : walkEndDate;
+
+                if (walkStart > walkEnd) continue;
+
+                // Count days expected for this habit in this bucket
+                let daysExpected = 0;
+                let cursor = new Date(walkStart + "T00:00:00Z");
+                const endDate = new Date(walkEnd + "T00:00:00Z");
+                while (cursor <= endDate) {
+                    daysExpected += 1;
+                    cursor = new Date(cursor.getTime() + oneDay);
+                }
+
+                if (daysExpected === 0) continue;
+
+                // Find this habit's real logs in the bucket
+                const habitLogs = logsByHabit.get(habit.HabitID) || [];
+                const bucketLogs = habitLogs.filter(l => {
+                    const d = toDateString(new Date(l.Date));
+                    return d >= walkStart && d <= walkEnd;
+                });
+
+                let hCompleted = 0;
+                let hPartial = 0;
+                let hMissedReal = 0;
+                let hActual = 0;
+                for (const log of bucketLogs) {
+                    if (log.Status === "Completed") hCompleted += 1;
+                    else if (log.Status === "Partial") hPartial += 1;
+                    else if (log.Status === "Missed") hMissedReal += 1;
+                    hActual += Number(log.ActualValue ?? 0);
+                }
+
+                const hLoggedCount = bucketLogs.length;
+                const hBackfilledMisses = Math.max(0, daysExpected - hLoggedCount);
+
+                completedCount += hCompleted;
+                partialCount += hPartial;
+                missedCount += hMissedReal + hBackfilledMisses;
+                totalLogs += hCompleted + hPartial + hMissedReal + hBackfilledMisses;
+                totalActual += hActual;
+
+                if (habit.TargetValue !== null) {
+                    totalTarget += Number(habit.TargetValue) * daysExpected;
                 }
             }
-            row.totalTarget = targetSum === 0 ? 0 : targetSum * row.daysInPeriod;
 
-            row.completionRate = row.totalLogs === 0
-                ? null
-                : row.completedCount / row.totalLogs;
+            const completionRate = totalLogs === 0 ? null : completedCount / totalLogs;
+            const consistencyRate = (() => {
+                // Denominator: total days expected across habits (not stored yet — recompute)
+                let totalDaysExpected = 0;
+                for (const habit of habitsResult.recordset) {
+                    const habitStart = habit.StartDate ? toDateString(new Date(habit.StartDate)) : bucket.start;
+                    if (habitStart > bucket.end) continue;
+                    const walkStart = habitStart > bucket.start ? habitStart : bucket.start;
+                    const walkEndDate = isInProgress && todayStr < bucket.end ? todayStr : bucket.end;
+                    const walkEnd = walkEndDate > bucket.end ? bucket.end : walkEndDate;
+                    if (walkStart > walkEnd) continue;
+                    let c = new Date(walkStart + "T00:00:00Z");
+                    const e = new Date(walkEnd + "T00:00:00Z");
+                    while (c <= e) {
+                        totalDaysExpected += 1;
+                        c = new Date(c.getTime() + oneDay);
+                    }
+                }
+                return totalDaysExpected === 0 ? null : (completedCount + partialCount) / totalDaysExpected;
+            })();
 
-            row.consistencyRate = habitsWithLogs === 0
-                ? null
-                : row.totalLogs / (row.daysInPeriod * habitsWithLogs);
-
-            if (groupBy === "week") {
-                row.periodLabel = isoWeekLabel(new Date(row.periodStart));
-            } else {
-                row.periodLabel = row.periodStart.slice(0, 7);
-            }
-
-            delete row._habitsWithLogs;
+            rows.push({
+                periodLabel: bucket.label,
+                periodStart: bucket.start,
+                periodEnd: bucket.end,
+                daysInPeriod: daysBetweenInclusive(bucket.start, bucket.end),
+                totalLogs,
+                completedCount,
+                partialCount,
+                missedCount,
+                totalActual,
+                totalTarget,
+                completionRate,
+                consistencyRate,
+                inProgress: isInProgress
+            });
         }
 
-        res.json({
-            groupBy,
-            periods,
-            from,
-            to,
-            rows
-        });
+        res.json({ groupBy, periods, from, to, rows });
 
     } catch (error) {
         console.log("Error getting stats report:", error);
-
-        res.status(500).json({
-            message: "Failed to get stats report"
-        });
+        res.status(500).json({ message: "Failed to get stats report" });
     }
 }
 
@@ -1275,6 +1386,246 @@ async function getRelationships(req, res) {
     }
 }
 
+async function getWeeklyReview(req, res) {
+    try {
+        const pool = await connectDatabase();
+        const userId = req.user.userId;
+
+        const offset = parseInt(req.query.weekOffset || "0", 10);
+        const today = new Date();
+
+        // Find this Monday
+        const dayOfWeek = today.getDay();
+        const daysSinceMonday = (dayOfWeek + 6) % 7;
+        const monday = new Date(today);
+        monday.setDate(today.getDate() - daysSinceMonday - (offset * 7));
+
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+
+        function fmtDate(d) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, "0");
+            const day = String(d.getDate()).padStart(2, "0");
+            return `${y}-${m}-${day}`;
+        }
+
+        const from = fmtDate(monday);
+        const to = fmtDate(sunday);
+
+        // Get active habits
+        const habitsResult = await pool.request()
+            .input("UserID", userId)
+            .query(`SELECT HabitID, Name, TargetValue, Unit FROM Habits WHERE UserID = @UserID AND Status = 'Active'`);
+        const habits = habitsResult.recordset;
+
+        // Get all logs for the week
+        const logsResult = await pool.request()
+            .input("UserID", userId)
+            .input("From", from)
+            .input("To", to)
+            .query(`
+                SELECT hl.HabitID, hl.Date, hl.Status, hl.ActualValue
+                FROM HabitLogs hl
+                JOIN Habits h ON h.HabitID = hl.HabitID
+                WHERE h.UserID = @UserID
+                  AND hl.Date >= @From
+                  AND hl.Date <= @To
+            `);
+        const logs = logsResult.recordset;
+
+        // Total counts
+        const totalLogs = logs.length;
+        const completedCount = logs.filter(l => l.Status === "Completed").length;
+        const completionRate = totalLogs > 0 ? Math.round((completedCount / totalLogs) * 100) : null;
+
+        // Best / toughest day
+        const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+        const perDay = {};
+        dayNames.forEach(d => perDay[d] = { total: 0, completed: 0 });
+
+        logs.forEach(l => {
+            const dateObj = new Date(l.Date);
+            const jsDay = dateObj.getDay(); // 0=Sun
+            const dayIdx = (jsDay + 6) % 7; // 0=Mon
+            const dayName = dayNames[dayIdx];
+            perDay[dayName].total++;
+            if (l.Status === "Completed") perDay[dayName].completed++;
+        });
+
+        let bestDay = null, bestDayRate = -1;
+        let worstDay = null, worstDayRate = 101;
+
+        dayNames.forEach(d => {
+            const stats = perDay[d];
+            if (stats.total > 0) {
+                const rate = stats.completed / stats.total;
+                if (rate > bestDayRate) { bestDayRate = rate; bestDay = d; }
+                if (rate < worstDayRate) { worstDayRate = rate; worstDay = d; }
+            }
+        });
+
+        // Best / weakest habit
+        let bestHabit = null, bestHabitRate = -1;
+        let weakestHabit = null, weakestHabitRate = 101;
+
+        habits.forEach(h => {
+            const hLogs = logs.filter(l => l.HabitID === h.HabitID);
+            if (hLogs.length === 0) return;
+            const hCompleted = hLogs.filter(l => l.Status === "Completed").length;
+            const rate = hCompleted / hLogs.length;
+            if (rate > bestHabitRate) { bestHabitRate = rate; bestHabit = { name: h.Name, rate: Math.round(rate * 100), logs: hLogs.length }; }
+            if (rate < weakestHabitRate) { weakestHabitRate = rate; weakestHabit = { name: h.Name, rate: Math.round(rate * 100), logs: hLogs.length }; }
+        });
+
+        res.json({
+            from,
+            to,
+            weekOffset: offset,
+            totalLogs,
+            completedCount,
+            completionRate,
+            activeHabits: habits.length,
+            bestDay: bestDay ? { name: bestDay, rate: Math.round(bestDayRate * 100) } : null,
+            worstDay: worstDay ? { name: worstDay, rate: Math.round(worstDayRate * 100) } : null,
+            bestHabit,
+            weakestHabit
+        });
+
+    } catch (error) {
+        console.log("Error getting weekly review:", error);
+        res.status(500).json({ message: "Failed to get weekly review" });
+    }
+}
+
+async function getHabitBreakdown(req, res) {
+    try {
+        const from = req.query.from;
+        const to = req.query.to;
+
+        if (!from || !to || !/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
+            return res.status(400).json({ message: "from and to are required in YYYY-MM-DD format" });
+        }
+
+        if (from > to) {
+            return res.status(400).json({ message: "from must be <= to" });
+        }
+
+        const pool = await connectDatabase();
+        const userId = req.user.userId;
+
+        const habitsResult = await pool.request()
+            .input("UserID", userId)
+            .query(`
+                SELECT HabitID, Name, Unit, TargetValue, StartDate
+                FROM Habits
+                WHERE UserID = @UserID AND Status = 'Active'
+                ORDER BY HabitID ASC
+            `);
+
+        const logsResult = await pool.request()
+            .input("UserID", userId)
+            .input("From", from)
+            .input("To", to)
+            .query(`
+                SELECT hl.HabitID, hl.Date, hl.Status, hl.ActualValue
+                FROM HabitLogs hl
+                JOIN Habits h ON h.HabitID = hl.HabitID
+                WHERE h.UserID = @UserID
+                    AND hl.Date >= @From
+                    AND hl.Date <= @To
+            `);
+
+        const logsByHabit = new Map();
+        for (const log of logsResult.recordset) {
+            if (!logsByHabit.has(log.HabitID)) logsByHabit.set(log.HabitID, []);
+            logsByHabit.get(log.HabitID).push(log);
+        }
+
+        const rows = [];
+
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+        for (const habit of habitsResult.recordset) {
+            const logs = logsByHabit.get(habit.HabitID) || [];
+
+            const habitStartDate = habit.StartDate ? toDateString(new Date(habit.StartDate)) : from;
+            const walkStart = habitStartDate > from ? habitStartDate : from;
+
+            if (walkStart > to) {
+                rows.push({
+                    habitId: habit.HabitID,
+                    name: habit.Name,
+                    unit: habit.Unit,
+                    completed: 0,
+                    partial: 0,
+                    missed: 0,
+                    totalActual: 0,
+                    totalTarget: habit.TargetValue === null ? null : 0,
+                    completionRate: null
+                });
+                continue;
+            }
+
+            const loggedDates = new Set();
+            let completed = 0;
+            let partial = 0;
+            let missed = 0;
+            let totalActual = 0;
+
+            for (const log of logs) {
+                loggedDates.add(toDateString(new Date(log.Date)));
+                if (log.Status === "Completed") completed += 1;
+                else if (log.Status === "Partial") partial += 1;
+                else if (log.Status === "Missed") missed += 1;
+                totalActual += Number(log.ActualValue ?? 0);
+            }
+
+            const oneDay = 24 * 60 * 60 * 1000;
+            let cursor = new Date(walkStart + "T00:00:00Z");
+            const endDate = new Date(to + "T00:00:00Z");
+            let daysExpected = 0;
+
+            while (cursor <= endDate) {
+                const dateStr = toDateString(cursor);
+                if (dateStr > todayStr) {
+                    cursor = new Date(cursor.getTime() + oneDay);
+                    continue;
+                }
+                daysExpected += 1;
+                if (!loggedDates.has(dateStr)) missed += 1;
+                cursor = new Date(cursor.getTime() + oneDay);
+            }
+
+            const totalTarget = habit.TargetValue === null
+                ? null
+                : Number(habit.TargetValue) * daysExpected;
+
+            const totalEffective = completed + partial + missed;
+            const completionRate = totalEffective === 0 ? null : completed / totalEffective;
+
+            rows.push({
+                habitId: habit.HabitID,
+                name: habit.Name,
+                unit: habit.Unit,
+                completed,
+                partial,
+                missed,
+                totalActual,
+                totalTarget,
+                completionRate
+            });
+        }
+
+        res.json({ from, to, habits: rows });
+
+    } catch (error) {
+        console.log("Error getting habit breakdown:", error);
+        res.status(500).json({ message: "Failed to get habit breakdown" });
+    }
+}
+
 module.exports = {
     getSummary,
     getCalendar,
@@ -1286,5 +1637,7 @@ module.exports = {
     getFailurePatterns,
     getAchievements,
     getSuggestions,
-    getRelationships
+    getRelationships,
+    getWeeklyReview,
+    getHabitBreakdown
 };

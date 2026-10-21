@@ -15,6 +15,27 @@
         window.location.replace("/pages/login.html");
     });
 
+        // Compute last week (Mon–Sun) — the previous completed week
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon...
+    const daysSinceMonday = (dayOfWeek + 6) % 7;
+    const thisMonday = new Date(now);
+    thisMonday.setDate(now.getDate() - daysSinceMonday);
+    const lastMonday = new Date(thisMonday);
+    lastMonday.setDate(thisMonday.getDate() - 7);
+    const lastSunday = new Date(lastMonday);
+    lastSunday.setDate(lastMonday.getDate() + 6);
+
+    function fmtDate(d) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${y}-${m}-${day}`;
+    }
+
+    const lastWeekFrom = fmtDate(lastMonday);
+    const lastWeekTo = fmtDate(lastSunday);
+
     const summaryBlock = document.getElementById("summary-block");
     const reportBlock = document.getElementById("report-block");
     const tableBlock = document.getElementById("table-block");
@@ -38,14 +59,22 @@
     }
 
     async function loadSummary() {
+
+        const titleEl = document.getElementById("summary-title");
+        if (titleEl) {
+            const fmt = (d) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+            titleEl.textContent = `Last Week (${fmt(lastMonday)} – ${fmt(lastSunday)})`;
+        }
+
         try {
-            const data = await api.get("/stats/summary");
+            const data = await api.get(`/stats/summary?from=${lastWeekFrom}&to=${lastWeekTo}`);
             const o = data.overall;
+            const possibleDays = o.habitsTracked * 7;
             summaryBlock.innerHTML = [
                 card("Active Habits", o.habitsTracked),
                 card("Completion Rate", pct(o.completionRate)),
                 card("Consistency Rate", pct(o.consistencyRate)),
-                card("Logs in range", o.totalLogs)
+                card("Days Expected", o.totalLogs + `<div class="card__sub">of ${possibleDays} possible</div>`)
             ].join("");
         } catch (err) {
             summaryBlock.innerHTML = `<p class="muted small">Could not load summary: ${err.message}</p>`;
@@ -66,9 +95,12 @@
 
             reportBlock.innerHTML = `<div class="report">` + rows.map((r) => {
                 const p = r.completionRate === null ? 0 : Math.round(r.completionRate * 100);
+                const isInProgress = r.inProgress === true;
+                const label = isInProgress ? r.periodLabel + " (in progress)" : r.periodLabel;
+                const rowClass = isInProgress ? "report__row is-in-progress" : "report__row";
                 return `
-                    <div class="report__row">
-                        <div class="report__label">${r.periodLabel}</div>
+                    <div class="${rowClass}">
+                        <div class="report__label">${label}</div>
                         <div class="report__bar">
                             <div class="report__bar-fill" style="width:${p}%"></div>
                         </div>
@@ -91,34 +123,23 @@
                 return;
             }
 
-            const perHabit = await Promise.all(active.map(async (h) => {
-                try {
-                    const stats = await api.get(`/habits/${h.HabitID}/stats`);
-                    return { habit: h, stats };
-                } catch (_) {
-                    return { habit: h, stats: null };
-                }
-            }));
+            const res = await api.get(`/stats/habit-breakdown?from=${lastWeekFrom}&to=${lastWeekTo}`);
+            const breakdown = res.habits || [];
 
-            const rows = perHabit.map(({ habit, stats }) => {
-                const r = stats ? stats.range : null;
-                const target = habit.TargetValue !== null ? Number(habit.TargetValue) : 0;
-                const targetPct = (() => {
-                    if (!r || target <= 0 || r.logsInRange === 0) return "—";
-                    const ratio = Math.min(r.totalActual / (target * r.logsInRange), 1);
-                    return Math.round(ratio * 100) + "%";
-                })();
+            const rows = breakdown.map((h) => {
+                const targetPct = (h.totalTarget && h.totalTarget > 0)
+                    ? Math.round((h.totalActual / h.totalTarget) * 100)
+                    : "—";
+
                 return `
                     <tr>
-                        <td>${habit.Name}</td>
-                        <td class="num">${r ? r.logsInRange : "—"}</td>
-                        <td class="num">${r ? r.completedCount : "—"}</td>
-                        <td class="num">${r ? r.partialCount : "—"}</td>
-                        <td class="num">${r ? r.missedCount : "—"}</td>
-                        <td class="num">${r ? `${r.totalActual} / ${r.totalTarget ?? "—"}` : "—"}</td>
-                        <td class="num">${targetPct}</td>
-                        <td class="num">${r ? pct(r.completionRate) : "—"}</td>
-                        <td class="num">${r ? pct(r.consistencyRate) : "—"}</td>
+                        <td>${h.name}</td>
+                        <td class="num">${h.completed}</td>
+                        <td class="num">${h.partial}</td>
+                        <td class="num">${h.missed}</td>
+                        <td class="num">${h.totalActual} / ${h.totalTarget ?? "—"}</td>
+                        <td class="num">${targetPct === "—" ? "—" : targetPct + "%"}</td>
+                        <td class="num">${h.completionRate === null ? "—" : Math.round(h.completionRate * 100) + "%"}</td>
                     </tr>
                 `;
             }).join("");
@@ -129,17 +150,15 @@
                         <thead>
                             <tr>
                                 <th>Habit</th>
-                                <th class="num">Logs</th>
                                 <th class="num">Completed</th>
                                 <th class="num">Partial</th>
                                 <th class="num">Missed</th>
                                 <th class="num">Actual / Target</th>
                                 <th class="num">% of Target</th>
                                 <th class="num">Completion</th>
-                                <th class="num">Consistency</th>
                             </tr>
                         </thead>
-                        <tbody>${rows}</tbody>
+                        <tbody>${rows || '<tr><td colspan="7" class="muted">No habits.</td></tr>'}</tbody>
                     </table>
                 </div>
             `;
