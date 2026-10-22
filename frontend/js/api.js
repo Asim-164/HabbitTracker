@@ -242,7 +242,7 @@ function renderHeaderAvatar(el, user) {
     if (avatarURL === "sage-triangle") { el.textContent = "▲"; el.style.background = "var(--sage-100)"; el.style.color = "var(--sage-700)"; return; }
     if (avatarURL === "leaf") { el.textContent = "🌿"; el.style.background = "var(--sage-50)"; return; }
     if (avatarURL === "wave") { el.textContent = "≈"; el.style.background = "#e8f0f5"; el.style.color = "#2a4d68"; return; }
-    if (avatarURL && avatarURL.length <= 3) {
+    if (avatarURL && avatarURL.length <= 4) {
         el.textContent = avatarURL;
         el.style.background = "#ffffff";
         el.classList.add("is-emoji");

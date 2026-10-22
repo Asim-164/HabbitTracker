@@ -30,7 +30,7 @@
         { value: "🌱", label: "Sprout" },
         { value: "🚀", label: "Rocket" },
         { value: "🎯", label: "Target" },
-        { value: "🧘", label: "Zen" },
+        { value: "🧘🏻", label: "Zen" },
         { value: "🔥", label: "Flame" },
         { value: "⭐", label: "Star" },
         { value: "sage-circle", label: "Sage Circle" },
@@ -59,7 +59,7 @@
 
     function renderAvatarPreview(el, name, avatarURL) {
         // Preset emoji
-        if (avatarURL && avatarURL.length <= 3 && /^\p{Emoji}/u.test(avatarURL)) {
+        if (avatarURL && avatarURL.length <= 4 && /^\p{Emoji}/u.test(avatarURL)) {
             el.textContent = avatarURL;
             el.style.background = "var(--sage-50)";
             el.style.color = "inherit";
@@ -120,7 +120,7 @@
     if (avatarOptions && currentUser) {
         avatarOptions.innerHTML = AVATAR_PRESETS.map(p => {
             const isActive = (currentUser.avatarURL || "") === p.value;
-            const isEmoji = p.value.length <= 3 && /\p{Emoji}/u.test(p.value);
+            const isEmoji = p.value.length <= 4 && /\p{Emoji}/u.test(p.value);
             const display = isEmoji ? p.value
                 : p.value === "sage-circle" ? "●"
                 : p.value === "amber-diamond" ? "◆"

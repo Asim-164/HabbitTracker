@@ -88,9 +88,10 @@
             </div>
         </header>
 
-        <div class="app__content app__content--tinted">
-            <div class="settings-grid">
+        <div class="app__content">
+            <div class="settings-stack">
 
+                <!-- Profile -->
                 <section class="panel">
                     <div class="panel__head">
                         <span class="panel__icon">
@@ -98,40 +99,46 @@
                         </span>
                         <h3 class="panel__title">Profile</h3>
                     </div>
-                    <div class="avatar-picker">
-                        <div class="avatar-picker__current" id="avatar-current">
-                            <span class="avatar-circle" id="avatar-preview">?</span>
+
+                    <div class="settings-profile">
+                        <div class="avatar-picker">
+                            <div class="avatar-picker__current">
+                                <span class="avatar-circle" id="avatar-preview">?</span>
+                            </div>
+                            <div class="avatar-picker__options">
+                                <div class="avatar-picker__label">Choose an avatar</div>
+                                <div class="avatar-picker__grid" id="avatar-options"></div>
+                            </div>
                         </div>
-                        <div class="avatar-picker__options">
-                            <div class="avatar-picker__label">Choose an avatar</div>
-                            <div class="avatar-picker__grid" id="avatar-options"></div>
-                        </div>
+
+                        <form id="profile-form" class="habit-form">
+                            <label class="habit-form__field">
+                                <span>Name</span>
+                                <input type="text" name="name" required maxlength="100">
+                            </label>
+
+                            <label class="habit-form__field">
+                                <span>Email</span>
+                                <input type="email" name="email" required>
+                            </label>
+
+                            <div class="habit-form__actions">
+                                <button type="submit" class="btn-primary">Save Profile</button>
+                            </div>
+                            <p class="habit-form__msg" id="profile-msg"></p>
+                        </form>
                     </div>
-                    <form id="profile-form" class="habit-form">
-                        <label class="habit-form__field">
-                            <span>Name</span>
-                            <input type="text" name="name" required maxlength="100">
-                        </label>
-
-                        <label class="habit-form__field">
-                            <span>Email</span>
-                            <input type="email" name="email" required>
-                        </label>
-
-                        <div class="habit-form__actions">
-                            <button type="submit" class="btn-primary">Save Profile</button>
-                        </div>
-                        <p class="habit-form__msg" id="profile-msg"></p>
-                    </form>
                 </section>
 
+                <!-- Security -->
                 <section class="panel">
                     <div class="panel__head">
                         <span class="panel__icon">
                             <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                         </span>
-                        <h3 class="panel__title">Change Password</h3>
+                        <h3 class="panel__title">Security</h3>
                     </div>
+
                     <form id="password-form" class="habit-form">
                         <label class="habit-form__field">
                             <span>Current password</span>
@@ -171,22 +178,70 @@
                     </form>
                 </section>
 
-                <section class="panel settings-about">
+                <!-- Help & Tips -->
+                <section class="panel">
+                    <div class="panel__head">
+                        <span class="panel__icon">
+                            <svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg>
+                        </span>
+                        <h3 class="panel__title">Help &amp; Tips</h3>
+                    </div>
+
+                    <div class="help-list">
+                        <details class="help-item">
+                            <summary>How is the Health Score calculated?</summary>
+                            <p>The Health Score combines three factors for each habit over the last 7 days: <strong>Consistency</strong> (50%) — how many days you logged out of days you were expected to log. <strong>Accuracy</strong> (30%) — how close your actual values were to your targets. <strong>Streak</strong> (20%) — your current consecutive non-missed days. The final number is between 0 and 100.</p>
+                        </details>
+
+                        <details class="help-item">
+                            <summary>How do streaks work?</summary>
+                            <p>A streak counts consecutive days where you logged something other than "Missed". A day with no log breaks the streak (treated the same as a missed day). Partial logs keep the streak alive. Only days from your habit's start date count.</p>
+                        </details>
+
+                        <details class="help-item">
+                            <summary>What counts as a Missed day?</summary>
+                            <p>A day is "Missed" if you either logged it as Missed, or you didn't log it at all after the day passed. Days before a habit's start date and today (which is still in progress) are never counted as Missed.</p>
+                        </details>
+
+                        <details class="help-item">
+                            <summary>How is the Weekly Review generated?</summary>
+                            <p>The Weekly Review shows last completed week (Monday–Sunday). It counts every expected day (logged or missed), identifies your Best Day (fewest misses) and Toughest Day (most misses), and highlights your strongest and weakest habits by completion rate.</p>
+                        </details>
+                    </div>
+                </section>
+
+                <!-- About -->
+                <section class="panel">
                     <div class="panel__head">
                         <span class="panel__icon">
                             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                         </span>
-                        <h3 class="panel__title">About</h3>
+                        <h3 class="panel__title">About HabbitTracker</h3>
                     </div>
 
-                    <div class="settings-about__body">
-                        <div class="settings-about__name">HabbitTracker</div>
-                        <p class="settings-about__desc">A habit tracker that helps you understand your patterns.</p>
+                    <p class="about-lead">HabbitTracker is designed around one idea: don't just mark a habit as done — track how you perform, understand your patterns, and use that to improve.</p>
 
-                        <div class="settings-about__meta">
-                            <div><span>Version</span><strong>0.1.0</strong></div>
-                            <div><span>Backend</span><strong>Node.js · Express</strong></div>
-                            <div><span>Database</span><strong>SQL Server</strong></div>
+                    <div class="about-tips">
+                        <div class="about-tip">
+                            <div class="about-tip__icon">📅</div>
+                            <div>
+                                <div class="about-tip__title">Log every day</div>
+                                <div class="about-tip__desc">Consistency is the biggest factor in your health score and streaks.</div>
+                            </div>
+                        </div>
+                        <div class="about-tip">
+                            <div class="about-tip__icon">📝</div>
+                            <div>
+                                <div class="about-tip__title">Write reflections</div>
+                                <div class="about-tip__desc">Connecting mood to performance reveals patterns you might not see otherwise.</div>
+                            </div>
+                        </div>
+                        <div class="about-tip">
+                            <div class="about-tip__icon">📊</div>
+                            <div>
+                                <div class="about-tip__title">Check your insights</div>
+                                <div class="about-tip__desc">Health score, patterns, and weekly reviews show where to focus next.</div>
+                            </div>
                         </div>
                     </div>
                 </section>
