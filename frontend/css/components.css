@@ -574,3 +574,12 @@
     background: var(--ink-300);
     color: #fff;
 }
+
+/* ---------- Health Score Tooltip ---------- */
+.health-tooltip { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; background: var(--ink-300); color: #fff; font-size: 10px; font-weight: 700; cursor: help; position: relative; }
+
+.health-tooltip::after { content: attr(data-tooltip); position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--ink-900); color: #fff; padding: 10px 14px; border-radius: var(--radius); font-size: 11px; line-height: 1.5; white-space: normal; width: 260px; opacity: 0; pointer-events: none; transition: opacity 0.15s ease; z-index: 100; text-align: left; font-weight: 400; }
+
+.health-tooltip::before { content: ""; position: absolute; top: calc(100% + 2px); left: 50%; transform: translateX(-50%); border: 6px solid transparent; border-bottom-color: var(--ink-900); opacity: 0; pointer-events: none; transition: opacity 0.15s ease; z-index: 100; }
+
+.health-tooltip:hover::after, .health-tooltip:hover::before { opacity: 1; }
