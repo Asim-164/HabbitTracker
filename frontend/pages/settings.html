@@ -69,9 +69,22 @@
                 <div class="app__search-results" id="search-results" hidden></div>
             </div>
 
-            <div class="app__user">
-                <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                <span id="user-name">—</span>
+            <div class="app__user-wrap" id="user-menu-wrap">
+                <button type="button" class="app__user" id="user-menu-btn">
+                    <span class="app__avatar" id="header-avatar"></span>
+                    <span id="user-name">—</span>
+                    <svg viewBox="0 0 24 24" class="app__user-chevron"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <div class="app__user-menu" id="user-menu" hidden>
+                    <a href="/pages/settings.html" class="app__user-menu-item">
+                        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        Profile & Settings
+                    </a>
+                    <button type="button" class="app__user-menu-item app__user-menu-item--danger" id="user-menu-logout">
+                        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        Logout
+                    </button>
+                </div>
             </div>
         </header>
 
@@ -84,6 +97,15 @@
                             <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                         </span>
                         <h3 class="panel__title">Profile</h3>
+                    </div>
+                    <div class="avatar-picker">
+                        <div class="avatar-picker__current" id="avatar-current">
+                            <span class="avatar-circle" id="avatar-preview">?</span>
+                        </div>
+                        <div class="avatar-picker__options">
+                            <div class="avatar-picker__label">Choose an avatar</div>
+                            <div class="avatar-picker__grid" id="avatar-options"></div>
+                        </div>
                     </div>
                     <form id="profile-form" class="habit-form">
                         <label class="habit-form__field">

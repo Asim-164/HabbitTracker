@@ -9,6 +9,7 @@ CREATE TABLE Users
     Email NVARCHAR(255) NOT NULL UNIQUE,
     PasswordHash NVARCHAR(255) NOT NULL,
     CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE()
+    AvatarURL NVARCHAR(50) NULL,
 );
 
 CREATE TABLE Categories
@@ -73,3 +74,4 @@ CREATE TABLE UserAchievements
     CONSTRAINT PK_UserAchievements PRIMARY KEY (UserID, AchievementID),
     CONSTRAINT FK_UserAchievements_Users FOREIGN KEY (UserID) REFERENCES Users(UserID)
 );
+

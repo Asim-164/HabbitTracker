@@ -86,14 +86,15 @@ async function loginUser(req, res) {
             }
         );
 
-        res.json({
-            message: "Login successful",
-            token,
-            userId: user.UserID,
-            name: user.Name,
-            email: user.Email,
-            createdAt: user.CreatedAt
-        });
+    res.json({
+        message: "Login successful",
+        token,
+        userId: user.UserID,
+        name: user.Name,
+        email: user.Email,
+        createdAt: user.CreatedAt,
+        avatarURL: user.AvatarURL
+    });
 
     } catch (error) { 
         console.log("Error logging in:", error);
@@ -222,9 +223,41 @@ async function updatePassword(req, res) {
     }
 }
 
+async function updateAvatar(req, res) {
+    try {
+        const pool = await connectDatabase();
+        const userId = req.user.userId;
+        const { avatarURL } = req.body;
+
+        // Allow null or a preset string
+        if (avatarURL !== null && typeof avatarURL !== "string") {
+            return res.status(400).json({ message: "avatarURL must be a string or null" });
+        }
+
+        if (typeof avatarURL === "string" && avatarURL.length > 50) {
+            return res.status(400).json({ message: "avatarURL is too long" });
+        }
+
+        await pool.request()
+            .input("UserID", userId)
+            .input("AvatarURL", avatarURL)
+            .query(`UPDATE Users SET AvatarURL = @AvatarURL WHERE UserID = @UserID`);
+
+        res.json({
+            message: "Avatar updated successfully",
+            avatarURL
+        });
+
+    } catch (error) {
+        console.log("Error updating avatar:", error);
+        res.status(500).json({ message: "Failed to update avatar" });
+    }
+}
+
 module.exports = {
     registerUser,
     loginUser,
     updateMe,
-    updatePassword
+    updatePassword,
+    updateAvatar
 };

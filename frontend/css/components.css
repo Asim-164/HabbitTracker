@@ -583,3 +583,24 @@
 .health-tooltip::before { content: ""; position: absolute; top: calc(100% + 2px); left: 50%; transform: translateX(-50%); border: 6px solid transparent; border-bottom-color: var(--ink-900); opacity: 0; pointer-events: none; transition: opacity 0.15s ease; z-index: 100; }
 
 .health-tooltip:hover::after, .health-tooltip:hover::before { opacity: 1; }
+
+/* ---------- Avatar Picker ---------- */
+.avatar-picker { display: flex; align-items: center; gap: var(--space-5); margin-bottom: var(--space-5); padding-bottom: var(--space-5); border-bottom: 1px solid var(--line); }
+
+.avatar-picker__current { flex-shrink: 0; }
+
+.avatar-circle { display: inline-flex; align-items: center; justify-content: center; width: 72px; height: 72px; border-radius: 50%; background: var(--sage-400); color: #fff; font-size: 28px; font-weight: 600; }
+
+.avatar-picker__options { flex: 1; }
+
+.avatar-picker__label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-500); font-weight: 500; margin-bottom: var(--space-3); }
+
+.avatar-picker__grid { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+.avatar-option { width: 44px; height: 44px; border-radius: 50%; border: 2px solid transparent; background: var(--sage-50); font-size: 20px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: border-color 0.15s ease, transform 0.15s ease; }
+
+.avatar-option:hover { border-color: var(--sage-300); transform: scale(1.08); }
+
+.avatar-option.is-active { border-color: var(--sage-500); background: var(--surface); }
+
+.avatar-option.is-emoji { background: #ffffff; border-color: var(--line); font-size: 24px; }    

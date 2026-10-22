@@ -156,24 +156,29 @@
     font-size: 20px;
 }
 
-.app__user {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    color: var(--ink-500);
-}
+.app__user-wrap { position: relative; }
 
-.app__user svg {
-    width: 18px;
-    height: 18px;
-    stroke: currentColor;
-    fill: none;
-    stroke-width: 1.8;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    opacity: 0.75;
-}
+.app__user { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-500); background: transparent; padding: 6px 10px; border-radius: var(--radius); transition: background 0.12s ease; cursor: pointer; }
+
+.app__user:hover { background: rgba(0, 0, 0, 0.04); }
+
+.app__avatar { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--sage-400); color: #fff; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+
+.app__avatar.is-emoji { background: #ffffff; border: 1px solid var(--line); font-size: 16px; }
+
+.app__user-chevron { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; opacity: 0.6; }
+
+.app__user-menu { position: absolute; top: calc(100% + 6px); right: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-md); min-width: 180px; padding: 4px; z-index: 100; }
+
+.app__user-menu-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: calc(var(--radius) - 4px); font-size: 14px; color: var(--ink-700); text-decoration: none; transition: background 0.12s ease; cursor: pointer; width: 100%; text-align: left; }
+
+.app__user-menu-item:hover { background: var(--sage-50); color: var(--ink-900); }
+
+.app__user-menu-item svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+.app__user-menu-item--danger { color: var(--red); }
+
+.app__user-menu-item--danger:hover { background: #fdf3f2; }
 
 .app__content {
     padding: var(--space-6);

@@ -74,7 +74,6 @@ function confirmDialog({ title, message, confirmLabel }) {
     return new Promise((resolve) => {
         const modal = document.getElementById("confirm-modal");
         if (!modal) {
-            // Fallback to native confirm if modal not on this page
             resolve(window.confirm(message || title || "Are you sure?"));
             return;
         }
@@ -178,3 +177,79 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 });
+
+// ---------- Global User Menu + Avatar ----------
+(function () {
+    const menuBtn = document.getElementById("user-menu-btn");
+    const menu = document.getElementById("user-menu");
+    const logoutBtn = document.getElementById("user-menu-logout");
+    const headerAvatar = document.getElementById("header-avatar");
+    const userNameSpan = document.getElementById("user-name");
+
+    if (!menuBtn || !menu) return;
+
+    const user = Auth.getUser();
+    if (user) {
+        if (headerAvatar) {
+            renderHeaderAvatar(headerAvatar, user);
+        }
+        if (userNameSpan && (userNameSpan.textContent === "—" || !userNameSpan.textContent.trim())) {
+            userNameSpan.textContent = user.name || "User";
+        }
+    }
+
+    menuBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        menu.toggleAttribute("hidden");
+    });
+
+    document.addEventListener("click", (e) => {
+        if (!e.target.closest("#user-menu-wrap")) {
+            menu.setAttribute("hidden", "");
+        }
+    });
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener("click", () => {
+            Auth.clear();
+            window.location.replace("/pages/login.html");
+        });
+    }
+})();
+
+function renderHeaderAvatar(el, user) {
+    const name = user.name || "";
+    const avatarURL = user.avatarURL;
+    const colors = ["#5c9459", "#4a7a48", "#7cae7c", "#3a603a", "#6a9e6a"];
+    const initials = (() => {
+        const parts = name.trim().split(/\s+/);
+        if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+        return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    })();
+    const colorHash = (() => {
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) % colors.length;
+        return colors[hash];
+    })();
+
+    el.textContent = "";
+    el.style.background = "";
+    el.style.color = "";
+    el.classList.remove("is-emoji");
+
+    if (avatarURL === "sage-circle") { el.style.background = "var(--sage-400)"; return; }
+    if (avatarURL === "amber-diamond") { el.textContent = "◆"; el.style.background = "#fdf3d9"; el.style.color = "#d9b558"; return; }
+    if (avatarURL === "sage-triangle") { el.textContent = "▲"; el.style.background = "var(--sage-100)"; el.style.color = "var(--sage-700)"; return; }
+    if (avatarURL === "leaf") { el.textContent = "🌿"; el.style.background = "var(--sage-50)"; return; }
+    if (avatarURL === "wave") { el.textContent = "≈"; el.style.background = "#e8f0f5"; el.style.color = "#2a4d68"; return; }
+    if (avatarURL && avatarURL.length <= 3) {
+        el.textContent = avatarURL;
+        el.style.background = "#ffffff";
+        el.classList.add("is-emoji");
+        return;
+    }
+
+    el.textContent = initials;
+    el.style.background = colorHash;
+    el.style.color = "#fff";
+}
