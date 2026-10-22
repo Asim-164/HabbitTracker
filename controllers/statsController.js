@@ -1008,7 +1008,7 @@ async function getAchievements(req, res) {
         const pool = await connectDatabase();
         const userId = req.user.userId;
 
-        // 1. Total logs and total completed logs
+        // Total logs + completed
         const statsResult = await pool.request()
             .input("UserID", userId)
             .query(`
@@ -1019,138 +1019,260 @@ async function getAchievements(req, res) {
                 JOIN Habits h ON h.HabitID = hl.HabitID
                 WHERE h.UserID = @UserID
             `);
-        
         const totalLogs = statsResult.recordset[0].TotalLogs || 0;
         const totalCompleted = statsResult.recordset[0].TotalCompleted || 0;
 
-         // NEW: Count total reflections
+        // Reflections count
         const refResult = await pool.request()
             .input("UserID", userId)
             .query(`SELECT COUNT(ReflectionID) AS TotalReflections FROM Reflections WHERE UserID = @UserID`);
         const totalReflections = refResult.recordset[0].TotalReflections || 0;
 
-        // 2. Max Streak (using a simpler logic: longest sequence of non-missed logs)
-        // For performance, we just check if they have a 7-day streak using the existing streak endpoint logic
-        // Or we can do a quick query for consecutive days.
-        // Let's do a simple check: Do they have any habit with a currentStreak >= 7?
-        // We can call the internal streak logic, but it's easier to just query the logs.
+        // Habits
         const habitsResult = await pool.request()
             .input("UserID", userId)
             .query(`SELECT HabitID, Name FROM Habits WHERE UserID = @UserID AND Status = 'Active'`);
-        
         const habits = habitsResult.recordset;
-        let maxStreak = 0;
-        
-        // (Simplified streak check for achievements)
+
+        // Current streak (max across active habits) + longest streak
+        let currentMaxStreak = 0;
+        let longestMaxStreak = 0;
+
         for (const h of habits) {
             const logs = await pool.request()
                 .input("HabitID", h.HabitID)
                 .query(`SELECT Date, Status FROM HabitLogs WHERE HabitID = @HabitID ORDER BY Date ASC`);
-            
-            let current = 0;
+
+            let run = 0;
             let max = 0;
             let prevDate = null;
-            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            let currentStreak = 0;
+            let reachedTodayOrYesterday = false;
+
             for (const l of logs.recordset) {
                 if (l.Status !== "Missed") {
                     const thisDate = new Date(l.Date);
                     if (prevDate && (thisDate - prevDate) === 86400000) {
-                        current++;
+                        run++;
                     } else {
-                        current = 1;
+                        run = 1;
                     }
-                    if (current > max) max = current;
+                    if (run > max) max = run;
                     prevDate = thisDate;
+
+                    // Current streak: must reach today or yesterday
+                    const diff = Math.floor((today - thisDate) / 86400000);
+                    if (diff === 0 || diff === 1) {
+                        if (!reachedTodayOrYesterday) {
+                            currentStreak = run;
+                            reachedTodayOrYesterday = true;
+                        }
+                    }
                 } else {
-                    current = 0;
+                    run = 0;
                     prevDate = null;
                 }
             }
-            if (max > maxStreak) maxStreak = max;
+
+            if (currentStreak > currentMaxStreak) currentMaxStreak = currentStreak;
+            if (max > longestMaxStreak) longestMaxStreak = max;
         }
 
-        // 3. Perfect Day (Completed all active habits on a single date)
-        let hasPerfectDay = false;
+        // Perfect days (all active habits completed on same day)
+        let perfectDays = 0;
         if (habits.length > 0) {
-            const perfectDayResult = await pool.request()
+            const perfectResult = await pool.request()
                 .input("UserID", userId)
                 .query(`
-                    SELECT hl.Date, 
-                           COUNT(CASE WHEN hl.Status = 'Completed' THEN 1 END) as CompletedCount,
-                           (SELECT COUNT(*) FROM Habits WHERE UserID = @UserID AND Status = 'Active') as ActiveHabits
+                    SELECT hl.Date, COUNT(CASE WHEN hl.Status = 'Completed' THEN 1 END) AS CompletedCount
                     FROM HabitLogs hl
                     JOIN Habits h ON h.HabitID = hl.HabitID
                     WHERE h.UserID = @UserID
                     GROUP BY hl.Date
                     HAVING COUNT(CASE WHEN hl.Status = 'Completed' THEN 1 END) = 
-                           (SELECT COUNT(*) FROM Habits WHERE UserID = @UserID AND Status = 'Active')
+                        (SELECT COUNT(*) FROM Habits WHERE UserID = @UserID AND Status = 'Active')
                 `);
-            if (perfectDayResult.recordset.length > 0) {
-                hasPerfectDay = true;
-            }
+            perfectDays = perfectResult.recordset.length;
         }
 
-        // Build the achievements list
-        const achievements = [
-            {
-                id: "first_step",
-                title: "First Steps",
-                description: "Log your first habit.",
-                icon: "🌱",
-                unlocked: totalLogs >= 1
-            },
-            {
-                id: "getting_going",
-                title: "Getting Going",
-                description: "Log 10 habits.",
-                icon: "🚀",
-                unlocked: totalLogs >= 10
-            },
-            {
-                id: "century",
-                title: "Century Club",
-                description: "Log 100 habits.",
-                icon: "💯",
-                unlocked: totalLogs >= 100
-            },
-            {
-                id: "consistency_king",
-                title: "Consistency King",
-                description: "Maintain a 7-day streak on any habit.",
-                icon: "👑",
-                unlocked: maxStreak >= 7
-            },
-            {
-                id: "perfectionist",
-                title: "Perfectionist",
-                description: "Complete all active habits in a single day.",
-                icon: "✨",
-                unlocked: hasPerfectDay
-            },
-            {
-                id: "habit_master",
-                title: "Habit Master",
-                description: "Log 500 habits.",
-                icon: "🏋️",
-                unlocked: totalLogs >= 500
-            },
-            {
-                id: "unstoppable",
-                title: "Unstoppable",
-                description: "Maintain a 30-day streak.",
-                icon: "🌟",
-                unlocked: maxStreak >= 30
-            },
-            {
-                id: "reflective",
-                title: "Reflective",
-                description: "Write 10 reflections.",
-                icon: "📝",
-                unlocked: totalReflections >= 10
+        // Helper: tier from thresholds
+        function tierFromValue(value, thresholds, resettable) {
+            // Returns { currentTier: null|'bronze'|'silver'|'gold', progressValue, nextThreshold, nextTier }
+            const tiers = ["bronze", "silver", "gold"];
+            let currentTier = null;
+            let nextThreshold = thresholds[0];
+            let nextTier = "bronze";
+
+            for (let i = 0; i < thresholds.length; i++) {
+                if (value >= thresholds[i]) {
+                    currentTier = tiers[i];
+                } else {
+                    nextThreshold = thresholds[i];
+                    nextTier = tiers[i];
+                    break;
+                }
             }
-        ];
+
+            if (currentTier === "gold") {
+                return { currentTier, progressValue: value, nextThreshold: null, nextTier: null };
+            }
+
+            return { currentTier, progressValue: value, nextThreshold, nextTier };
+        }
+
+        // Build list
+        const achievements = [];
+
+        // First Steps — single
+        achievements.push({
+            id: "first_step",
+            title: "First Steps",
+            description: "Log your first habit.",
+            icon: "🌱",
+            unlocked: totalLogs >= 1,
+            tier: totalLogs >= 1 ? "single" : null,
+            progressValue: totalLogs >= 1 ? null : totalLogs,
+            nextThreshold: totalLogs >= 1 ? null : 1
+        });
+
+        // Getting Going — tiers
+        const gg = tierFromValue(totalLogs, [10, 50, 100], false);
+        achievements.push({
+            id: "getting_going",
+            title: "Getting Going",
+            description: "Log habits over time.",
+            icon: "🚀",
+            unlocked: gg.currentTier !== null,
+            tier: gg.currentTier,
+            progressValue: gg.progressValue,
+            nextThreshold: gg.nextThreshold,
+            nextTier: gg.nextTier
+        });
+
+        // Century Club — single, 100 completed
+        achievements.push({
+            id: "century",
+            title: "Century Club",
+            description: "Complete 100 habits.",
+            icon: "💯",
+            unlocked: totalCompleted >= 100,
+            tier: totalCompleted >= 100 ? "single" : null,
+            progressValue: totalCompleted >= 100 ? null : totalCompleted,
+            nextThreshold: totalCompleted >= 100 ? null : 100
+        });
+
+        // Consistency King — tiers, resettable
+        const ck = tierFromValue(currentMaxStreak, [7, 14, 30], true);
+        achievements.push({
+            id: "consistency_king",
+            title: "Consistency King",
+            description: "Maintain a streak.",
+            icon: "👑",
+            unlocked: ck.currentTier !== null,
+            tier: ck.currentTier,
+            progressValue: ck.progressValue,
+            nextThreshold: ck.nextThreshold,
+            nextTier: ck.nextTier,
+            resettable: true
+        });
+
+        // Perfectionist — tiers
+        const pf = tierFromValue(perfectDays, [1, 5, 20], false);
+        achievements.push({
+            id: "perfectionist",
+            title: "Perfectionist",
+            description: "Complete all active habits in one day.",
+            icon: "✨",
+            unlocked: pf.currentTier !== null,
+            tier: pf.currentTier,
+            progressValue: pf.progressValue,
+            nextThreshold: pf.nextThreshold,
+            nextTier: pf.nextTier
+        });
+
+        // Habit Master — tiers
+        const hm = tierFromValue(totalLogs, [50, 200, 500], false);
+        achievements.push({
+            id: "habit_master",
+            title: "Habit Master",
+            description: "Log habits consistently.",
+            icon: "🏋️",
+            unlocked: hm.currentTier !== null,
+            tier: hm.currentTier,
+            progressValue: hm.progressValue,
+            nextThreshold: hm.nextThreshold,
+            nextTier: hm.nextTier
+        });
+
+        // Unstoppable — tiers, resettable
+        const us = tierFromValue(currentMaxStreak, [30, 60, 100], true);
+        achievements.push({
+            id: "unstoppable",
+            title: "Unstoppable",
+            description: "Maintain a long streak.",
+            icon: "🌟",
+            unlocked: us.currentTier !== null,
+            tier: us.currentTier,
+            progressValue: us.progressValue,
+            nextThreshold: us.nextThreshold,
+            nextTier: us.nextTier,
+            resettable: true
+        });
+
+        // Reflective — single
+        achievements.push({
+            id: "reflective",
+            title: "Reflective",
+            description: "Write 10 reflections.",
+            icon: "📝",
+            unlocked: totalReflections >= 10,
+            tier: totalReflections >= 10 ? "single" : null,
+            progressValue: totalReflections >= 10 ? null : totalReflections,
+            nextThreshold: totalReflections >= 10 ? null : 10
+        });
+
+                // Persist highest tier per achievement
+        const TIER_ORDER = { bronze: 1, silver: 2, gold: 3, single: 1 };
+        const existingResult = await pool.request()
+            .input("UserID", userId)
+            .query(`SELECT AchievementID, HighestTier FROM UserAchievements WHERE UserID = @UserID`);
+        const existing = new Map();
+        for (const row of existingResult.recordset) {
+            existing.set(row.AchievementID, row.HighestTier);
+        }
+
+        for (const a of achievements) {
+            const current = a.tier;  // null | "bronze" | "silver" | "gold" | "single"
+            const stored = existing.get(a.id);
+            const currentRank = current ? (TIER_ORDER[current] || 0) : 0;
+            const storedRank = stored ? (TIER_ORDER[stored] || 0) : 0;
+
+            if (currentRank > storedRank) {
+                // Upsert: update or insert
+                if (stored !== undefined) {
+                    await pool.request()
+                        .input("UserID", userId)
+                        .input("AchievementID", a.id)
+                        .input("HighestTier", current)
+                        .query(`UPDATE UserAchievements SET HighestTier = @HighestTier, UpdatedAt = GETDATE() WHERE UserID = @UserID AND AchievementID = @AchievementID`);
+                } else {
+                    await pool.request()
+                        .input("UserID", userId)
+                        .input("AchievementID", a.id)
+                        .input("HighestTier", current)
+                        .query(`INSERT INTO UserAchievements (UserID, AchievementID, HighestTier) VALUES (@UserID, @AchievementID, @HighestTier)`);
+                }
+                existing.set(a.id, current);
+            }
+
+            // Attach highest tier to the response
+            a.highestTier = existing.get(a.id) || null;
+        }
 
         res.json({ achievements });
+
     } catch (error) {
         console.log("Error getting achievements:", error);
         res.status(500).json({ message: "Failed to get achievements" });

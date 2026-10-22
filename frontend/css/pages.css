@@ -385,6 +385,25 @@
     font-weight: bold;
 }
 
+.achievement-card.is-tier-bronze { border-color: #c69d72; background: linear-gradient(180deg, #fdf8f2 0%, #ffffff 100%); }
+.achievement-card.is-tier-silver { border-color: #a8b0b8; background: linear-gradient(180deg, #f7f9fb 0%, #ffffff 100%); }
+.achievement-card.is-tier-gold { border-color: #d9b558; background: linear-gradient(180deg, #fffcf2 0%, #ffffff 100%); }
+
+.achievement-progress { margin-top: var(--space-2); width: 100%; }
+.achievement-progress__bar { height: 4px; background: var(--line); border-radius: 999px; overflow: hidden; }
+.achievement-progress__fill { height: 100%; background: var(--sage-500); border-radius: 999px; transition: width 0.3s ease; }
+.achievement-progress__text { font-size: 10px; color: var(--ink-500); text-align: center; margin-top: 4px; font-weight: 500; }
+
+.achievement-reset-hint { font-size: 9px; color: var(--amber); margin-top: 4px; font-style: italic; opacity: 0.7; }
+
+@keyframes achievement-pulse { 0% { box-shadow: 0 0 0 0 rgba(92, 148, 89, 0.5); } 70% { box-shadow: 0 0 0 12px rgba(92, 148, 89, 0); } 100% { box-shadow: 0 0 0 0 rgba(92, 148, 89, 0); } }
+.achievement-card.is-new { animation: achievement-pulse 1.5s ease-in-out 2; }
+
+.achievement-toast { position: fixed; top: 24px; right: 24px; background: var(--surface); border: 1px solid var(--sage-300); border-radius: var(--radius); box-shadow: var(--shadow-md); padding: var(--space-4) var(--space-5); display: flex; gap: var(--space-3); align-items: flex-start; max-width: 360px; z-index: 9999; transform: translateX(400px); transition: transform 0.4s ease; }
+.achievement-toast.is-visible { transform: translateX(0); }
+.achievement-toast__icon { font-size: 28px; flex-shrink: 0; }
+.achievement-toast__text { font-size: 14px; color: var(--ink-900); line-height: 1.5; }
+
 /* ---------- Smart Suggestions ---------- */
 .suggestions-list {
     display: flex;

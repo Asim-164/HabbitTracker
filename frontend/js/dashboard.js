@@ -434,7 +434,7 @@
         }
     }
 
-        async function loadAchievements() {
+    async function loadAchievements() {
         const el = document.getElementById("achievements");
         if (!el) return;
         el.innerHTML = `<p class="muted small">Loading achievements…</p>`;
@@ -448,17 +448,94 @@
                 return;
             }
 
-            el.innerHTML = list.map(a => `
-                <div class="achievement-card ${a.unlocked ? 'is-unlocked' : 'is-locked'}">
-                    <div class="achievement-icon">${a.icon}</div>
-                    <div class="achievement-title">${a.title}</div>
-                    <div class="achievement-desc">${a.description}</div>
-                </div>
-            `).join("");
+            const tierLabel = (tier) => {
+                if (!tier || tier === "single") return "";
+                return " · " + tier.charAt(0).toUpperCase() + tier.slice(1);
+            };
 
+            const tierClass = (tier) => {
+                if (tier === "bronze") return "is-tier-bronze";
+                if (tier === "silver") return "is-tier-silver";
+                if (tier === "gold") return "is-tier-gold";
+                return "";
+            };
+
+            // Detect new unlocks vs last visit (localStorage)
+            const storageKey = "achievementsSeen_" + (Auth.getUser()?.userId || "anon");
+            let seen = {};
+            try { seen = JSON.parse(localStorage.getItem(storageKey) || "{}"); } catch (_) {}
+            const newlyUnlocked = [];
+
+            el.innerHTML = list.map(a => {
+                const displayTier = a.highestTier || a.tier;
+                const isUnlocked = !!displayTier;
+                const progressPct = (a.progressValue !== null && a.nextThreshold)
+                    ? Math.min(100, Math.round((a.progressValue / a.nextThreshold) * 100))
+                    : 0;
+                const progressText = (a.progressValue !== null && a.nextThreshold)
+                    ? `${a.progressValue} / ${a.nextThreshold}`
+                    : "";
+                const resetHint = a.resettable ? `<div class="achievement-reset-hint">Resets on miss</div>` : "";
+
+                // Detect new unlock
+                const previousTier = seen[a.id];
+                const rank = { bronze: 1, silver: 2, gold: 3, single: 1 };
+                const currentRank = rank[displayTier] || 0;
+                const prevRank = rank[previousTier] || 0;
+                const isNew = currentRank > prevRank;
+                if (isNew) newlyUnlocked.push(a);
+
+                return `
+                    <div class="achievement-card ${isUnlocked ? 'is-unlocked' : 'is-locked'} ${tierClass(displayTier)} ${isNew ? 'is-new' : ''}" data-ach-id="${a.id}">
+                        <div class="achievement-icon">${a.icon}</div>
+                        <div class="achievement-title">${a.title}${tierLabel(displayTier)}</div>
+                        <div class="achievement-desc">${a.description}</div>
+                        ${!isUnlocked && a.nextThreshold ? `
+                            <div class="achievement-progress">
+                                <div class="achievement-progress__bar">
+                                    <div class="achievement-progress__fill" style="width:${progressPct}%"></div>
+                                </div>
+                                <div class="achievement-progress__text">${progressText}</div>
+                            </div>
+                        ` : ""}
+                        ${resetHint}
+                    </div>
+                `;
+            }).join("");
+
+            // Save current state
+            const newSeen = {};
+            list.forEach(a => {
+                const t = a.highestTier || a.tier;
+                if (t) newSeen[a.id] = t;
+            });
+            localStorage.setItem(storageKey, JSON.stringify(newSeen));
+
+            // Show toast for newly unlocked
+            if (newlyUnlocked.length > 0) {
+                showAchievementToast(newlyUnlocked);
+            }
         } catch (err) {
             el.innerHTML = `<p class="muted small">Could not load achievements: ${err.message}</p>`;
         }
+    }
+
+    function showAchievementToast(achievements) {
+        const toast = document.createElement("div");
+        toast.className = "achievement-toast";
+        toast.innerHTML = `
+            <div class="achievement-toast__icon">🏆</div>
+            <div class="achievement-toast__text">
+                <strong>Achievement unlocked!</strong><br>
+                ${achievements.map(a => `${a.title} — ${(a.highestTier || a.tier || "").charAt(0).toUpperCase() + (a.highestTier || a.tier || "").slice(1)}`).join("<br>")}
+            </div>
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.classList.add("is-visible"), 100);
+        setTimeout(() => {
+            toast.classList.remove("is-visible");
+            setTimeout(() => toast.remove(), 400);
+        }, 4000);
     }
 
     async function loadSuggestions() {
