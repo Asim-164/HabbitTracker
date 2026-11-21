@@ -13,7 +13,14 @@ const reflectionRoutes = require("./routes/reflectionRoutes");
 const statsRoutes = require("./routes/statsRoutes");
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "frontend")));
+app.use(express.static(path.join(__dirname, 'frontend'), {
+    maxAge: '1d',
+    setHeaders: (res, path) => {
+        if (path.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache');
+        }
+    }
+}));
 
 app.use("/api/habits", habitRoutes);
 app.use("/api/users", userRoutes);
