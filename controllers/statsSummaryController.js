@@ -15,31 +15,36 @@ async function getSummary(req, res) {
         const pool = await connectDatabase();
         const userId = req.user.userId;
 
-        const habitsResult = await pool.request()
-            .input("UserID", userId)
-            .query(`
-                SELECT HabitID, Name, Unit, TargetValue, Frequency, Status, StartDate
+        const habitsResult = await pool.query(`
+                SELECT 
+                    habitid AS "HabitID", 
+                    name AS "Name", 
+                    unit AS "Unit", 
+                    targetvalue AS "TargetValue", 
+                    frequency AS "Frequency", 
+                    status AS "Status", 
+                    TO_CHAR(startdate, 'YYYY-MM-DD') AS "StartDate"
                 FROM Habits
-                WHERE UserID = @UserID AND Status = 'Active'
-                ORDER BY HabitID ASC
-            `);
+                WHERE userid = $1 AND status = 'Active'
+                ORDER BY habitid ASC
+            `, [userId]);
 
-        const logsResult = await pool.request()
-            .input("UserID", userId)
-            .input("From", from)
-            .input("To", to)
-            .query(`
-                SELECT hl.HabitID, hl.Date, hl.Status, hl.ActualValue
+        const logsResult = await pool.query(`
+                SELECT 
+                    hl.habitid AS "HabitID", 
+                    TO_CHAR(hl.date, 'YYYY-MM-DD') AS "Date", 
+                    hl.status AS "Status", 
+                    hl.actualvalue AS "ActualValue"
                 FROM HabitLogs hl
-                JOIN Habits h ON h.HabitID = hl.HabitID
-                WHERE h.UserID = @UserID
-                    AND hl.Date >= @From
-                    AND hl.Date <= @To
-                ORDER BY hl.HabitID ASC, hl.Date ASC
-            `);
+                JOIN Habits h ON h.habitid = hl.habitid
+                WHERE h.userid = $1
+                    AND hl.date >= $2
+                    AND hl.date <= $3
+                ORDER BY hl.habitid ASC, hl.date ASC
+            `, [userId, from, to]);
 
         const logsByHabit = new Map();
-        for (const log of logsResult.recordset) {
+        for (const log of logsResult.rows) {
             if (!logsByHabit.has(log.HabitID)) logsByHabit.set(log.HabitID, []);
             logsByHabit.get(log.HabitID).push(log);
         }
@@ -54,9 +59,9 @@ async function getSummary(req, res) {
         let overallActual = 0;
         let overallDaysExpected = 0;
 
-        for (const habit of habitsResult.recordset) {
+        for (const habit of habitsResult.rows) {
             const logs = logsByHabit.get(habit.HabitID) || [];
-            const habitStartDate = habit.StartDate ? toDateString(new Date(habit.StartDate)) : from;
+            const habitStartDate = habit.StartDate ? habit.StartDate : from;
             const walkStart = habitStartDate > from ? habitStartDate : from;
 
             if (walkStart > to) {
@@ -86,7 +91,7 @@ async function getSummary(req, res) {
             let totalActual = 0;
 
             for (const log of logs) {
-                loggedDates.add(toDateString(new Date(log.Date)));
+                loggedDates.add(log.Date);
                 if (log.Status === "Completed") completed += 1;
                 else if (log.Status === "Partial") partial += 1;
                 else if (log.Status === "Missed") missed += 1;
@@ -190,39 +195,40 @@ async function getCalendar(req, res) {
         const pool = await connectDatabase();
         const userId = req.user.userId;
 
-        const habitResult = await pool.request()
-            .input("HabitID", habitId)
-            .input("UserID", userId)
-            .query(`
-                SELECT HabitID, Name, Unit, TargetValue, StartDate
+        const habitResult = await pool.query(`
+                SELECT 
+                    habitid AS "HabitID", 
+                    name AS "Name", 
+                    unit AS "Unit", 
+                    targetvalue AS "TargetValue", 
+                    TO_CHAR(startdate, 'YYYY-MM-DD') AS "StartDate"
                 FROM Habits
-                WHERE HabitID = @HabitID AND UserID = @UserID
-            `);
+                WHERE habitid = $1 AND userid = $2
+            `, [habitId, userId]);
 
-        if (habitResult.recordset.length === 0) {
+        if (habitResult.rows.length === 0) {
             return res.status(403).json({ message: "You do not have access to this habit" });
         }
 
-        const habit = habitResult.recordset[0];
+        const habit = habitResult.rows[0];
 
-        const logsResult = await pool.request()
-            .input("HabitID", habitId)
-            .input("From", from)
-            .input("To", to)
-            .query(`
-                SELECT Date, Status, ActualValue
+        const logsResult = await pool.query(`
+                SELECT 
+                    TO_CHAR(date, 'YYYY-MM-DD') AS "Date", 
+                    status AS "Status", 
+                    actualvalue AS "ActualValue"
                 FROM HabitLogs
-                WHERE HabitID = @HabitID
-                    AND Date >= @From
-                    AND Date <= @To
-            `);
+                WHERE habitid = $1
+                    AND date >= $2
+                    AND date <= $3
+            `, [habitId, from, to]);
 
         const logsByDate = new Map();
-        for (const log of logsResult.recordset) {
-            logsByDate.set(toDateString(log.Date), log);
+        for (const log of logsResult.rows) {
+            logsByDate.set(log.Date, log);
         }
 
-        const habitStartDate = habit.StartDate ? toDateString(new Date(habit.StartDate)) : from;
+        const habitStartDate = habit.StartDate ? habit.StartDate : from;
 
         const now = new Date();
         const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -281,55 +287,58 @@ async function getHabitStats(req, res) {
         const pool = await connectDatabase();
         const userId = req.user.userId;
 
-        const habitResult = await pool.request()
-            .input("HabitID", habitId)
-            .input("UserID", userId)
-            .query(`
-                SELECT HabitID, Name, Unit, TargetValue, Frequency, Status, StartDate
+        const habitResult = await pool.query(`
+                SELECT 
+                    habitid AS "HabitID", 
+                    name AS "Name", 
+                    unit AS "Unit", 
+                    targetvalue AS "TargetValue", 
+                    frequency AS "Frequency", 
+                    status AS "Status", 
+                    TO_CHAR(startdate, 'YYYY-MM-DD') AS "StartDate"
                 FROM Habits
-                WHERE HabitID = @HabitID AND UserID = @UserID
-            `);
+                WHERE habitid = $1 AND userid = $2
+            `, [habitId, userId]);
 
-        if (habitResult.recordset.length === 0) {
+        if (habitResult.rows.length === 0) {
             return res.status(403).json({ message: "You do not have access to this habit" });
         }
 
-        const habit = habitResult.recordset[0];
+        const habit = habitResult.rows[0];
 
-        const rangeLogs = await pool.request()
-            .input("HabitID", habitId)
-            .input("From", from)
-            .input("To", to)
-            .query(`
-                SELECT Date, Status, ActualValue
+        const rangeLogs = await pool.query(`
+                SELECT 
+                    TO_CHAR(date, 'YYYY-MM-DD') AS "Date", 
+                    status AS "Status", 
+                    actualvalue AS "ActualValue"
                 FROM HabitLogs
-                WHERE HabitID = @HabitID
-                    AND Date >= @From
-                    AND Date <= @To
-            `);
+                WHERE habitid = $1
+                    AND date >= $2
+                    AND date <= $3
+            `, [habitId, from, to]);
 
         let completedCount = 0;
         let partialCount = 0;
         let missedCount = 0;
         let totalActual = 0;
 
-        for (const log of rangeLogs.recordset) {
+        for (const log of rangeLogs.rows) {
             if (log.Status === "Completed") completedCount += 1;
             else if (log.Status === "Partial") partialCount += 1;
             else if (log.Status === "Missed") missedCount += 1;
             totalActual += Number(log.ActualValue ?? 0);
         }
 
-        let logsInRange = rangeLogs.recordset.length;
+        let logsInRange = rangeLogs.rows.length;
 
         if (useBackfill) {
-            const habitStartDate = habit.StartDate ? toDateString(new Date(habit.StartDate)) : from;
+            const habitStartDate = habit.StartDate ? habit.StartDate : from;
             const now = new Date();
             const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
             const loggedDates = new Set();
-            for (const log of rangeLogs.recordset) {
-                loggedDates.add(toDateString(new Date(log.Date)));
+            for (const log of rangeLogs.rows) {
+                loggedDates.add(log.Date);
             }
 
             const walkStart = habitStartDate > from ? habitStartDate : from;
@@ -350,29 +359,28 @@ async function getHabitStats(req, res) {
                 }
             }
 
-            logsInRange = rangeLogs.recordset.length + backfilledMisses;
+            logsInRange = rangeLogs.rows.length + backfilledMisses;
         }
 
         const totalTarget = habit.TargetValue === null ? null : Number(habit.TargetValue) * daysInRange;
         const completionRate = logsInRange === 0 ? null : completedCount / logsInRange;
         const consistencyRate = daysInRange === 0 ? null : logsInRange / daysInRange;
 
-        const streakLogs = await pool.request()
-            .input("HabitID", habitId)
-            .input("AsOf", asOf)
-            .query(`
-                SELECT Date, Status
+        const streakLogs = await pool.query(`
+                SELECT 
+                    TO_CHAR(date, 'YYYY-MM-DD') AS "Date", 
+                    status AS "Status"
                 FROM HabitLogs
-                WHERE HabitID = @HabitID AND Date <= @AsOf
-                ORDER BY Date ASC
-            `);
+                WHERE habitid = $1 AND date <= $2
+                ORDER BY date ASC
+            `, [habitId, asOf]);
 
         let runningStreak = 0;
         let longestStreak = 0;
         let lastLoggedDate = null;
         let previousDate = null;
 
-        for (const row of streakLogs.recordset) {
+        for (const row of streakLogs.rows) {
             const isMissed = row.Status === "Missed";
 
             if (!isMissed) {
@@ -462,25 +470,30 @@ async function getReport(req, res) {
         const pool = await connectDatabase();
         const userId = req.user.userId;
 
-        const habitsResult = await pool.request()
-            .input("UserID", userId)
-            .query(`SELECT HabitID, TargetValue, StartDate FROM Habits WHERE UserID = @UserID AND Status = 'Active'`);
+        const habitsResult = await pool.query(`
+            SELECT 
+                habitid AS "HabitID", 
+                targetvalue AS "TargetValue", 
+                TO_CHAR(startdate, 'YYYY-MM-DD') AS "StartDate" 
+            FROM Habits 
+            WHERE userid = $1 AND status = 'Active'
+        `, [userId]);
 
-        const logsResult = await pool.request()
-            .input("UserID", userId)
-            .input("From", from)
-            .input("To", to)
-            .query(`
-                SELECT hl.HabitID, hl.Date, hl.Status, hl.ActualValue
+        const logsResult = await pool.query(`
+                SELECT 
+                    hl.habitid AS "HabitID", 
+                    TO_CHAR(hl.date, 'YYYY-MM-DD') AS "Date", 
+                    hl.status AS "Status", 
+                    hl.actualvalue AS "ActualValue"
                 FROM HabitLogs hl
-                JOIN Habits h ON h.HabitID = hl.HabitID
-                WHERE h.UserID = @UserID
-                    AND hl.Date >= @From
-                    AND hl.Date <= @To
-            `);
+                JOIN Habits h ON h.habitid = hl.habitid
+                WHERE h.userid = $1
+                    AND hl.date >= $2
+                    AND hl.date <= $3
+            `, [userId, from, to]);
 
         const logsByHabit = new Map();
-        for (const log of logsResult.recordset) {
+        for (const log of logsResult.rows) {
             if (!logsByHabit.has(log.HabitID)) logsByHabit.set(log.HabitID, []);
             logsByHabit.get(log.HabitID).push(log);
         }
@@ -492,8 +505,8 @@ async function getReport(req, res) {
             const isInProgress = todayStr >= bucket.start && todayStr <= bucket.end;
             let totalLogs = 0, completedCount = 0, partialCount = 0, missedCount = 0, totalActual = 0, totalTarget = 0;
 
-            for (const habit of habitsResult.recordset) {
-                const habitStart = habit.StartDate ? toDateString(new Date(habit.StartDate)) : bucket.start;
+            for (const habit of habitsResult.rows) {
+                const habitStart = habit.StartDate ? habit.StartDate : bucket.start;
                 if (habitStart > bucket.end) continue;
 
                 const walkStart = habitStart > bucket.start ? habitStart : bucket.start;
@@ -512,7 +525,7 @@ async function getReport(req, res) {
 
                 const habitLogs = logsByHabit.get(habit.HabitID) || [];
                 const bucketLogs = habitLogs.filter(l => {
-                    const d = toDateString(new Date(l.Date));
+                    const d = l.Date;
                     return d >= walkStart && d <= walkEnd;
                 });
 
@@ -540,8 +553,8 @@ async function getReport(req, res) {
             const completionRate = totalLogs === 0 ? null : completedCount / totalLogs;
             const consistencyRate = (() => {
                 let totalDaysExpected = 0;
-                for (const habit of habitsResult.recordset) {
-                    const habitStart = habit.StartDate ? toDateString(new Date(habit.StartDate)) : bucket.start;
+                for (const habit of habitsResult.rows) {
+                    const habitStart = habit.StartDate ? habit.StartDate : bucket.start;
                     if (habitStart > bucket.end) continue;
                     const walkStart = habitStart > bucket.start ? habitStart : bucket.start;
                     const walkEndDate = isInProgress && todayStr < bucket.end ? todayStr : bucket.end;
@@ -589,30 +602,33 @@ async function getHabitBreakdown(req, res) {
         const pool = await connectDatabase();
         const userId = req.user.userId;
 
-        const habitsResult = await pool.request()
-            .input("UserID", userId)
-            .query(`
-                SELECT HabitID, Name, Unit, TargetValue, StartDate
+        const habitsResult = await pool.query(`
+                SELECT 
+                    habitid AS "HabitID", 
+                    name AS "Name", 
+                    unit AS "Unit", 
+                    targetvalue AS "TargetValue", 
+                    TO_CHAR(startdate, 'YYYY-MM-DD') AS "StartDate"
                 FROM Habits
-                WHERE UserID = @UserID AND Status = 'Active'
-                ORDER BY HabitID ASC
-            `);
+                WHERE userid = $1 AND status = 'Active'
+                ORDER BY habitid ASC
+            `, [userId]);
 
-        const logsResult = await pool.request()
-            .input("UserID", userId)
-            .input("From", from)
-            .input("To", to)
-            .query(`
-                SELECT hl.HabitID, hl.Date, hl.Status, hl.ActualValue
+        const logsResult = await pool.query(`
+                SELECT 
+                    hl.habitid AS "HabitID", 
+                    TO_CHAR(hl.date, 'YYYY-MM-DD') AS "Date", 
+                    hl.status AS "Status", 
+                    hl.actualvalue AS "ActualValue"
                 FROM HabitLogs hl
-                JOIN Habits h ON h.HabitID = hl.HabitID
-                WHERE h.UserID = @UserID
-                    AND hl.Date >= @From
-                    AND hl.Date <= @To
-            `);
+                JOIN Habits h ON h.habitid = hl.habitid
+                WHERE h.userid = $1
+                    AND hl.date >= $2
+                    AND hl.date <= $3
+            `, [userId, from, to]);
 
         const logsByHabit = new Map();
-        for (const log of logsResult.recordset) {
+        for (const log of logsResult.rows) {
             if (!logsByHabit.has(log.HabitID)) logsByHabit.set(log.HabitID, []);
             logsByHabit.get(log.HabitID).push(log);
         }
@@ -621,9 +637,9 @@ async function getHabitBreakdown(req, res) {
         const now = new Date();
         const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
-        for (const habit of habitsResult.recordset) {
+        for (const habit of habitsResult.rows) {
             const logs = logsByHabit.get(habit.HabitID) || [];
-            const habitStartDate = habit.StartDate ? toDateString(new Date(habit.StartDate)) : from;
+            const habitStartDate = habit.StartDate ? habit.StartDate : from;
             const walkStart = habitStartDate > from ? habitStartDate : from;
 
             if (walkStart > to) {
@@ -641,7 +657,7 @@ async function getHabitBreakdown(req, res) {
             let completed = 0, partial = 0, missed = 0, totalActual = 0;
 
             for (const log of logs) {
-                loggedDates.add(toDateString(new Date(log.Date)));
+                loggedDates.add(log.Date);
                 if (log.Status === "Completed") completed += 1;
                 else if (log.Status === "Partial") partial += 1;
                 else if (log.Status === "Missed") missed += 1;

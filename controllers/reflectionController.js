@@ -4,7 +4,7 @@ async function createReflection(req, res) {
     try {
         const pool = await connectDatabase();
 
-                const {
+        const {
             date,
             mood,
             notes
@@ -12,27 +12,19 @@ async function createReflection(req, res) {
 
         const userId = req.user.userId;
 
-        await pool.request()
-            .input("UserID", userId)
-            .input("Date", date)
-            .input("Mood", mood)
-            .input("Notes", notes)
-            .query(`
+        await pool.query(`
                 INSERT INTO Reflections
                 (
-                    UserID,
-                    Date,
-                    Mood,
-                    Notes
+                    userid,
+                    date,
+                    mood,
+                    notes
                 )
                 VALUES
                 (
-                    @UserID,
-                    @Date,
-                    @Mood,
-                    @Notes
+                    $1, $2, $3, $4
                 )
-            `);
+            `, [userId, date, mood, notes]);
 
         res.status(201).json({
             message: "Reflection created successfully!"
@@ -53,16 +45,20 @@ async function getReflections(req, res) {
 
         const userId = req.user.userId;
 
-        const result = await pool.request()
-            .input("UserID", userId)
-            .query(`
-                SELECT *
+        const result = await pool.query(`
+                SELECT 
+                    reflectionid AS "ReflectionID",
+                    userid AS "UserID",
+                    TO_CHAR(date, 'YYYY-MM-DD') AS "Date",
+                    mood AS "Mood",
+                    notes AS "Notes",
+                    createdat AS "CreatedAt"
                 FROM Reflections
-                WHERE UserID = @UserID
-                ORDER BY Date DESC
-            `);
+                WHERE userid = $1
+                ORDER BY date DESC
+            `, [userId]);
 
-        res.json(result.recordset);
+        res.json(result.rows);
 
     } catch (error) {
         console.log("Error getting reflections:", error);
@@ -86,20 +82,14 @@ async function updateReflection(req, res) {
             notes
         } = req.body;
 
-        await pool.request()
-            .input("ReflectionID", reflectionId)
-            .input("UserID", userId)
-            .input("Date", date)
-            .input("Mood", mood)
-            .input("Notes", notes)
-            .query(`
+        await pool.query(`
                 UPDATE Reflections
                 SET
-                    Date = @Date,
-                    Mood = @Mood,
-                    Notes = @Notes
-                WHERE ReflectionID = @ReflectionID AND UserID = @UserID
-            `);
+                    date = $1,
+                    mood = $2,
+                    notes = $3
+                WHERE reflectionid = $4 AND userid = $5
+            `, [date, mood, notes, reflectionId, userId]);
 
         res.json({
             message: "Reflection updated successfully!"
@@ -121,13 +111,10 @@ async function deleteReflection(req, res) {
         const reflectionId = req.params.id;
         const userId = req.user.userId;
 
-        await pool.request()
-            .input("ReflectionID", reflectionId)
-            .input("UserID", userId)
-            .query(`
+        await pool.query(`
                 DELETE FROM Reflections
-                WHERE ReflectionID = @ReflectionID AND UserID = @UserID
-            `);
+                WHERE reflectionid = $1 AND userid = $2
+            `, [reflectionId, userId]);
 
         res.json({
             message: "Reflection deleted successfully!"

@@ -1,4 +1,4 @@
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const connectDatabase = require("../database/db");
 
@@ -10,11 +10,7 @@ async function registerUser(req, res) {
 
         const passwordHash = await bcrypt.hash(password, 10);
 
-        await pool.request()
-            .input("Name", name)
-            .input("Email", email)
-            .input("PasswordHash", passwordHash)
-            .query(`
+        await pool.query(`
                 INSERT INTO Users
                 (
                     Name,
@@ -23,11 +19,11 @@ async function registerUser(req, res) {
                 )
                 VALUES
                 (
-                    @Name,
-                    @Email,
-                    @PasswordHash
+                    $1,
+                    $2,
+                    $3
                 )
-            `);
+            `, [name, email, passwordHash]);
 
         res.status(201).json({
             message: "User registered successfully!"
@@ -48,25 +44,30 @@ async function loginUser(req, res) {
 
         const { email, password } = req.body;
 
-        const result = await pool.request()
-            .input("Email", email)
-            .query(`
+        const result = await pool.query(`
                 SELECT *
                 FROM Users
-                WHERE Email = @Email
-            `);
+                WHERE Email = $1
+            `, [email]);
 
-        if (result.recordset.length === 0) {
+        if (result.rows.length === 0) {
             return res.status(401).json({
                 message: "Invalid email or password"
             });
         }
 
-        const user = result.recordset[0];
+        const user = result.rows[0];
+        
+        // Force the hash to be a clean string and trim any hidden spaces
+        const cleanHash = String(user.passwordhash).trim();
 
+
+        // -------------------
+        
+        // Check the password
         const passwordMatch = await bcrypt.compare(
             password,
-            user.PasswordHash
+            cleanHash
         );
 
         if (!passwordMatch) {
@@ -75,10 +76,10 @@ async function loginUser(req, res) {
             });
         }
 
-                const token = jwt.sign(
+        const token = jwt.sign(
             {
-                userId: user.UserID,
-                email: user.Email
+                userId: user.userid,
+                email: user.email
             },
             process.env.JWT_SECRET,
             {
@@ -86,15 +87,15 @@ async function loginUser(req, res) {
             }
         );
 
-    res.json({
-        message: "Login successful",
-        token,
-        userId: user.UserID,
-        name: user.Name,
-        email: user.Email,
-        createdAt: user.CreatedAt,
-        avatarURL: user.AvatarURL
-    });
+        res.json({
+            message: "Login successful",
+            token,
+            userId: user.userid,
+            name: user.name,
+            email: user.email,
+            createdAt: user.createdat,
+            avatarURL: user.avatarurl
+        });
 
     } catch (error) { 
         console.log("Error logging in:", error);
@@ -118,30 +119,23 @@ async function updateMe(req, res) {
             });
         }
 
-        const existing = await pool.request()
-            .input("Email", email)
-            .input("UserID", userId)
-            .query(`
+        const existing = await pool.query(`
                 SELECT UserID
                 FROM Users
-                WHERE Email = @Email AND UserID <> @UserID
-            `);
+                WHERE Email = $1 AND UserID <> $2
+            `, [email, userId]);
 
-        if (existing.recordset.length > 0) {
+        if (existing.rows.length > 0) {
             return res.status(409).json({
                 message: "That email is already in use"
             });
         }
 
-        await pool.request()
-            .input("UserID", userId)
-            .input("Name", name)
-            .input("Email", email)
-            .query(`
+        await pool.query(`
                 UPDATE Users
-                SET Name = @Name, Email = @Email
-                WHERE UserID = @UserID
-            `);
+                SET Name = $1, Email = $2
+                WHERE UserID = $3
+            `, [name, email, userId]);
 
         res.json({
             message: "Profile updated successfully!",
@@ -176,21 +170,19 @@ async function updatePassword(req, res) {
             });
         }
 
-        const result = await pool.request()
-            .input("UserID", userId)
-            .query(`
+        const result = await pool.query(`
                 SELECT PasswordHash
                 FROM Users
-                WHERE UserID = @UserID
-            `);
+                WHERE UserID = $1
+            `, [userId]);
 
-        if (result.recordset.length === 0) {
+        if (result.rows.length === 0) {
             return res.status(404).json({
                 message: "User not found"
             });
         }
 
-        const currentHash = result.recordset[0].PasswordHash;
+        const currentHash = result.rows[0].passwordhash;
         const matches = await bcrypt.compare(currentPassword, currentHash);
 
         if (!matches) {
@@ -201,14 +193,11 @@ async function updatePassword(req, res) {
 
         const newHash = await bcrypt.hash(newPassword, 10);
 
-        await pool.request()
-            .input("UserID", userId)
-            .input("PasswordHash", newHash)
-            .query(`
+        await pool.query(`
                 UPDATE Users
-                SET PasswordHash = @PasswordHash
-                WHERE UserID = @UserID
-            `);
+                SET PasswordHash = $1
+                WHERE UserID = $2
+            `, [newHash, userId]);
 
         res.json({
             message: "Password updated successfully!"
@@ -229,7 +218,6 @@ async function updateAvatar(req, res) {
         const userId = req.user.userId;
         const { avatarURL } = req.body;
 
-        // Allow null or a preset string
         if (avatarURL !== null && typeof avatarURL !== "string") {
             return res.status(400).json({ message: "avatarURL must be a string or null" });
         }
@@ -238,10 +226,7 @@ async function updateAvatar(req, res) {
             return res.status(400).json({ message: "avatarURL is too long" });
         }
 
-        await pool.request()
-            .input("UserID", userId)
-            .input("AvatarURL", avatarURL)
-            .query(`UPDATE Users SET AvatarURL = @AvatarURL WHERE UserID = @UserID`);
+        await pool.query(`UPDATE Users SET AvatarURL = $1 WHERE UserID = $2`, [avatarURL, userId]);
 
         res.json({
             message: "Avatar updated successfully",

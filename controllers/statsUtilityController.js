@@ -5,22 +5,21 @@ async function getRecentActivity(req, res) {
         const pool = await connectDatabase();
         const userId = req.user.userId;
 
-        const result = await pool.request()
-            .input("UserID", userId)
-            .query(`
-                SELECT TOP 5
-                    hl.LogID,
-                    hl.Date,
-                    hl.Status,
-                    hl.ActualValue,
-                    h.Name AS HabitName
+        const result = await pool.query(`
+                SELECT 
+                    hl.logid AS "LogID",
+                    TO_CHAR(hl.date, 'YYYY-MM-DD') AS "Date",
+                    hl.status AS "Status",
+                    hl.actualvalue AS "ActualValue",
+                    h.name AS "HabitName"
                 FROM HabitLogs hl
-                JOIN Habits h ON h.HabitID = hl.HabitID
-                WHERE h.UserID = @UserID
-                ORDER BY hl.Date DESC, hl.LogID DESC
-            `);
+                JOIN Habits h ON h.habitid = hl.habitid
+                WHERE h.userid = $1
+                ORDER BY hl.date DESC, hl.logid DESC
+                LIMIT 5
+            `, [userId]);
 
-        res.json(result.recordset);
+        res.json(result.rows);
     } catch (error) {
         console.log("Error getting recent activity:", error);
         res.status(500).json({ message: "Failed to get recent activity" });
@@ -39,34 +38,34 @@ async function searchAll(req, res) {
 
         const searchTerm = `%${q}%`;
 
-        const habitsResult = await pool.request()
-            .input("UserID", userId)
-            .input("Q", searchTerm)
-            .query(`
-                SELECT TOP 5 HabitID, Name, Status
+        const habitsResult = await pool.query(`
+                SELECT habitid AS "HabitID", name AS "Name", status AS "Status"
                 FROM Habits
-                WHERE UserID = @UserID AND Name LIKE @Q
-                ORDER BY HabitID DESC
-            `);
+                WHERE userid = $1 AND name ILIKE $2
+                ORDER BY habitid DESC
+                LIMIT 5
+            `, [userId, searchTerm]);
 
-        const reflectionsResult = await pool.request()
-            .input("UserID", userId)
-            .input("Q", searchTerm)
-            .query(`
-                SELECT TOP 5 ReflectionID, Date, Mood, Notes
+        const reflectionsResult = await pool.query(`
+                SELECT 
+                    reflectionid AS "ReflectionID", 
+                    TO_CHAR(date, 'YYYY-MM-DD') AS "Date", 
+                    mood AS "Mood", 
+                    notes AS "Notes"
                 FROM Reflections
-                WHERE UserID = @UserID 
+                WHERE userid = $1 
                   AND (
-                      Notes LIKE @Q 
-                      OR Mood LIKE @Q 
-                      OR CONVERT(VARCHAR(10), Date, 120) LIKE @Q
+                      notes ILIKE $2 
+                      OR mood ILIKE $2 
+                      OR TO_CHAR(date, 'YYYY-MM-DD') ILIKE $2
                   )
-                ORDER BY Date DESC
-            `);
+                ORDER BY date DESC
+                LIMIT 5
+            `, [userId, searchTerm]);
 
         res.json({
-            habits: habitsResult.recordset,
-            reflections: reflectionsResult.recordset
+            habits: habitsResult.rows,
+            reflections: reflectionsResult.rows
         });
 
     } catch (error) {
