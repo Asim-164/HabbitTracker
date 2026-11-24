@@ -4,6 +4,9 @@
     grid-template-columns: 240px 1fr;
     min-height: 100vh;
     background: var(--bg);
+    max-width: 1200px; /* Reduced from 1440px to force a tighter, centered layout */
+    margin: 0 auto;
+    box-shadow: 0 0 20px rgba(0,0,0,0.05); /* Adds a subtle border so you can see the edges */
 }
 
 .app__sidebar {
